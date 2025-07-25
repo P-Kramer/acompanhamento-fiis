@@ -3,13 +3,4 @@ pandas
 requests
 beautifulsoup4
 openpyxl
-
-
-
 requests
-datetime 
-
-os
-re
-BytesIO
-json
