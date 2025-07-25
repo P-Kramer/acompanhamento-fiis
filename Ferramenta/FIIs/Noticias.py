@@ -12,7 +12,7 @@ def pagina_FIIs ():
     import json
 
 
-    if st.button("⬅️ Voltar ao menu"):
+    if st.button("⬅️ Voltar ao menu", key="btn_voltar_menu_fiis"):
         st.session_state.pagina = "menu"
         
     if st.session_state.pagina == "menu":
