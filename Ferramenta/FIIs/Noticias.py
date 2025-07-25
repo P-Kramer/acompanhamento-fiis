@@ -58,8 +58,14 @@ def pagina_FIIs ():
 
     def get_ultimo_dividendo(ticker):
         url = f"https://statusinvest.com.br/fundos-imobiliarios/{ticker.lower()}"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers)
+        headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Connection": "keep-alive"
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+
         soup = BeautifulSoup(response.text, "html.parser")
         linha = soup.select_one("table tbody tr")
         if linha:
@@ -72,6 +78,7 @@ def pagina_FIIs ():
                         "Data-Base": colunas[1].text.strip(),
                         "Pagamento": colunas[2].text.strip(),
                         "Último Dividendo (R$)": valor
+                        
                     }
                 except:
                     pass
@@ -81,6 +88,7 @@ def pagina_FIIs ():
             "Pagamento": None,
             "Último Dividendo (R$)": None
         }
+        st.code(soup.prettify()[:1000])
 
     # --- Layout ---
     st.set_page_config("Analisador FIIs", layout="wide")
