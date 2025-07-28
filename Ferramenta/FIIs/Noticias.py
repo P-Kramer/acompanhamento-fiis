@@ -65,7 +65,11 @@ def pagina_FIIs ():
         "Connection": "keep-alive"
         }
         response = requests.get(url, headers=headers, timeout=10)
-
+        st.text(response.status_code)
+        st.code(response.text[:1000])
+        if response.status_code != 200:
+            st.warning(f"Erro {response.status_code} para {ticker}")
+            return {"Fundo": ticker.upper(), "Data-Base": None, "Pagamento": None, "Último Dividendo (R$)": None}
         soup = BeautifulSoup(response.text, "html.parser")
         linha = soup.select_one("table tbody tr")
         if linha:
