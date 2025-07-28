@@ -64,12 +64,6 @@ for _, row in df_variaveis.iterrows():
             df_proc = df_proc.drop(columns=["Data"])
             df_proc = df_proc[["MesAno", nome]]
 
-            if nome == "IBCbr":
-            
-                print(df_proc.tail(20))
-
-
-
             lista_dfs.append(df_proc)
 
         except Exception as e:

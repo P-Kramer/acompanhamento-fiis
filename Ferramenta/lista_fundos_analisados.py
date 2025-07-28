@@ -2,7 +2,7 @@ import pandas as pd
 
 # Caminho do arquivo
 #arquivo = r"C:\Users\User\Documents\OneDrive\Documentos\Guilherme\Precos_Reuters.xlsm"
-arquivo = r"C:\Users\User\Documents\GitHub\Longview_FIIs\Ferramenta\Precos_Reuters.xlsm"
+arquivo = r"C:\Users\User\Documents\OneDrive\Documentos\Guilherme\Precos_Reuters.xlsm"
 # Abre apenas a aba "Preços"
 df_precos = pd.read_excel(arquivo, sheet_name="Preços", header=None)
 

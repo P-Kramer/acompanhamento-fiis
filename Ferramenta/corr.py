@@ -4,7 +4,7 @@ import numpy as np
 
 from dados import df_merged
 from alfas import df_dy_mensal
-from Ferramenta.lista_fundos_analisados import estrategias_fiis_reorganizado
+from lista_fundos_analisados import estrategias_fiis_reorganizado
 from dados import correlacoes_por_variavel
 
 
@@ -102,9 +102,9 @@ def calcular_correlacoes(
                         "Correlação": melhor_corr
                     })
 
-            if lista_resultados_fundo:
-                df_resultado_fundo = pd.DataFrame(lista_resultados_fundo)
-                resultado_categoria.append({fundo: df_resultado_fundo})
+            df_resultado_fundo = pd.DataFrame(lista_resultados_fundo)
+            resultado_categoria.append({fundo: df_resultado_fundo})
+
 
         if resultado_categoria:
             resultados_por_categoria[categoria] = resultado_categoria
@@ -122,7 +122,3 @@ resultados = calcular_correlacoes(
     max_lag = 12,
     limite_correlacao = 0.3
 )
-
-
-for df in resultados["Tijolo"]:
-    print(df)

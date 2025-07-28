@@ -70,7 +70,7 @@ def gerar_graficos_dy_vs_cdi(
     return resultados
 
 from alfas import df_dy_mensal
-from Ferramenta.lista_fundos_analisados import estrategias_fiis_reorganizado
+from lista_fundos_analisados import estrategias_fiis_reorganizado
 from alfas import serie_cdi
 
 graficos = gerar_graficos_dy_vs_cdi(

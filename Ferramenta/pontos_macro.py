@@ -1,7 +1,6 @@
 import pandas as pd
-import numpy as np
 
-# Simular uma matriz de decisão baseada na imagem fornecida
+# Tabela de decisão original
 tabela_decisao = pd.DataFrame([
     # Direta
     {"inflexao_macro": "subiu", "dy_atual": "subiu", "tipo_correlacao": "direta", "sinal": "Comprar"},
@@ -19,42 +18,38 @@ tabela_decisao = pd.DataFrame([
     {"inflexao_macro": "estavel", "dy_atual": "caiu", "tipo_correlacao": "inversa", "sinal": "Neutro"},
 ])
 
-# Função para detectar inflexão
-def detectar_inflexao(serie):
-    if len(serie) < 3:
+# Função para detectar inflexão em uma série (últimos 21 dias úteis)
+def detectar_inflexao(serie, janela=21, limite=0.01):
+    serie = serie.dropna()
+    if len(serie) < janela:
         return "estavel"
-    delta = serie.iloc[-1] - serie.iloc[-3]
-    if delta > 0.01:
+    recente = serie.iloc[-janela:]
+    delta = (recente.iloc[-1] - recente.iloc[0]) / abs(recente.iloc[0])
+    if delta > limite:
         return "subiu"
-    elif delta < -0.01:
+    elif delta < -limite:
         return "caiu"
     else:
         return "estavel"
 
-# Função para gerar o sinal para cada fundo baseado em múltiplas variáveis
-def gerar_sinais_para_fundo(fundo_resultados, df_dy, df_macro, correlacoes_por_variavel, categoria):
+# Geração de sinais por fundo
+def gerar_sinais_para_fundo(fundo_resultados, df_dy, df_macro, correlacoes_por_variavel, categoria, janela=21, limite=0.01):
     sinais = []
-
     for resultado in fundo_resultados:
         for fundo, df_res in resultado.items():
             for _, row in df_res.iterrows():
                 variavel = row["Variável"]
                 corr = row["Correlação"]
-                lag = row["Defasagem"]
                 tipo = correlacoes_por_variavel.get(variavel, {}).get(categoria)
-
-                if tipo is None:
+                if tipo is None or variavel not in df_macro.columns or fundo not in df_dy.columns:
                     continue
 
-                # Identificar inflexão da variável macro
-                serie_macro = df_macro[variavel].dropna().rolling(2).mean()
-                inflexao = detectar_inflexao(serie_macro)
+                serie_macro = df_macro[variavel].dropna()
+                inflexao = detectar_inflexao(serie_macro, janela, limite)
 
-                # Identificar direção do DY
-                serie_dy = df_dy[fundo].dropna().rolling(2).mean()
-                direcao_dy = detectar_inflexao(serie_dy)
+                serie_dy = df_dy[fundo].dropna()
+                direcao_dy = detectar_inflexao(serie_dy, janela, limite)
 
-                # Procurar na matriz de decisão
                 linha = tabela_decisao[
                     (tabela_decisao["inflexao_macro"] == inflexao) &
                     (tabela_decisao["dy_atual"] == direcao_dy) &
@@ -63,10 +58,9 @@ def gerar_sinais_para_fundo(fundo_resultados, df_dy, df_macro, correlacoes_por_v
 
                 if not linha.empty:
                     sinais.append((linha.iloc[0]["sinal"], abs(corr)))
-
     return sinais
 
-# Função agregadora final
+# Síntese final do sinal com ponderação
 def sintetizar_sinal_final(sinais):
     if not sinais:
         return "Neutro"
@@ -74,8 +68,15 @@ def sintetizar_sinal_final(sinais):
     resultado = df_sinais.groupby("sinal")["peso"].sum().sort_values(ascending=False)
     return resultado.idxmax()
 
+
+# Supondo que já estejam importados:
+# df_dy_diario: DataFrame com DYs diários
+# df_merged: variáveis macroeconômicas (também com base diária)
+# resultados: lista de correlações por fundo
+# correlacoes_por_variavel: tipo de correlação por variável e categoria
+
+from alfas import df_dy_diario
 from dados import df_merged
-from alfas import df_dy_mensal
 from corr import resultados
 from dados import correlacoes_por_variavel
 
@@ -84,12 +85,18 @@ sinais_categoria = []
 
 for resultado in resultados.get(categoria, []):
     for fundo, _ in resultado.items():
-        sinais = gerar_sinais_para_fundo([resultado], df_dy_mensal, df_merged, correlacoes_por_variavel, categoria)
+        sinais = gerar_sinais_para_fundo(
+            [resultado],
+            df_dy_diario,
+            df_merged,
+            correlacoes_por_variavel,
+            categoria,
+            janela=21,
+            limite=0.01
+        )
         decisao_final = sintetizar_sinal_final(sinais)
         sinais_categoria.append((fundo, decisao_final))
 
-# Exibir os sinais
+# Exibe os sinais finais
 for fundo, decisao in sinais_categoria:
     print(f"{fundo}: {decisao}")
-
-
