@@ -1,6 +1,6 @@
 import streamlit as st
 from FIIs.Noticias import pagina_FIIs
-from pagina1 import pagina_resultados
+#from pagina1 import pagina_resultados
 
 
 
@@ -85,5 +85,5 @@ if st.session_state.pagina == "menu":
     menu_principal()
 elif st.session_state.pagina == "fiis":
     pagina_FIIs()
-elif st.session_state.pagina == "graficos":
-    pagina_resultados()
+#elif st.session_state.pagina == "graficos":
+    #pagina_resultados()
