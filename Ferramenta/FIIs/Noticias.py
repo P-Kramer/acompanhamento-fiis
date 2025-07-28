@@ -53,7 +53,7 @@ def pagina_FIIs():
             "Link Relatório": None
         }
         try:
-            response = requests.get(url, params=params, headers=headers, timeout=15)
+            response = requests.get(url, params=params, headers=headers, timeout=30)
             response.raise_for_status()
             dados = response.json()
 
@@ -202,10 +202,19 @@ def pagina_FIIs():
             todas_noticias = []
             dividendos_atuais = []
 
-            for fii in selecionados:
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+
+            total = len(selecionados)
+            for idx, fii in enumerate(selecionados, 1):
+                status_text.markdown(f"🔎 Coletando <b>{idx}</b> de <b>{total}</b> ({fii})...", unsafe_allow_html=True)
                 noticias_fii, dividendo = buscar_noticias(fii, data_inicial_str, data_final_str)
                 todas_noticias.extend(noticias_fii)
                 dividendos_atuais.append(dividendo)
+                progress_bar.progress(idx / total)
+
+            status_text.markdown(f"✅ Coleta finalizada: {total} de {total} FIIs processados.", unsafe_allow_html=True)
+            progress_bar.empty()
 
             # Notas: df_noticias NÃO tem colunas de dividendos!
             df_noticias = pd.DataFrame(todas_noticias)[["Fundo", "Data", "Título", "Cod", "Link"]]
