@@ -7,16 +7,16 @@ from alfas import alfas
 # Função para gerar o sinal
 def gerar_sinal(score_final, media_5d, media_21d, pvp):
     if score_final is None or media_5d is None or media_21d is None or pvp is None:
-        return "NEUTRO"
+        return "Neutro"
 
     tendencia = "alta" if media_5d > media_21d else "queda"
 
     if score_final > 6 and tendencia == "queda" and pvp > 0.9 and media_5d < 0:
-        return "VENDER"
+        return "Vender"
     elif score_final >= 5.5 and tendencia == "alta" and pvp < 0.95:
-        return "COMPRAR"
+        return "Comprar"
     else:
-        return "NEUTRO"
+        return "Neutro"
 
 # Construir a tabela final com DY incluso
 resultados = []
@@ -43,4 +43,3 @@ for _, row in df_ranking_final.iterrows():
         })
 
 df_resultado = pd.DataFrame(resultados)
-print(df_resultado)

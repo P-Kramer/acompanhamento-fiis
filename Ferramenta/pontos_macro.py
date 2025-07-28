@@ -97,6 +97,3 @@ for resultado in resultados.get(categoria, []):
         decisao_final = sintetizar_sinal_final(sinais)
         sinais_categoria.append((fundo, decisao_final))
 
-# Exibe os sinais finais
-for fundo, decisao in sinais_categoria:
-    print(f"{fundo}: {decisao}")
