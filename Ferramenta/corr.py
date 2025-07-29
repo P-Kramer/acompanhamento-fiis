@@ -117,7 +117,7 @@ resultados = calcular_correlacoes(
     df_variaveis=df_merged,
     df_dy=df_dy_mensal,
     estrategias_fiis_reorganizado=estrategias_fiis_reorganizado,
-    correlacoes_esperadas=correlacoes_por_variavel,    janela_suavizacao = 6,
+    correlacoes_esperadas=correlacoes_por_variavel,janela_suavizacao = 6,
     min_periodos = 3,
     max_lag = 12,
     limite_correlacao = 0.3

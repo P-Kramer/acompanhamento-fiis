@@ -40,15 +40,25 @@ def pagina_resultados():
                 score = df_ranking_final[df_ranking_final["Fundo"] == fundo]["Score_Final"].values[0]
                 cor = "🟢" if score >= 6.5 else "🟡" if score >= 5 else "🔴"
                 st.markdown(f"### Score Final: **{score:.2f}** {cor}")
+                
+            from glob import glob
+            import os
 
-            # Caminho do gráfico (busca flexível)
-            arquivos = glob(f"Gráficos/{categoria}/*{fundo}*.png")
+            # Caminho base completo
+            base_path = r"C:\Users\User\Documents\OneDrive\Documentos\Guilherme\Códigos\Longview_FIIs\acompanhamento-fiis\Ferramenta\Gráficos"
+
+            # Buscar todos os PNGs da subpasta da categoria
+            arquivos = [
+                arq for arq in glob(f"{base_path}\\{categoria}\\*.png")
+                if fundo.upper() in os.path.basename(arq).upper()
+            ]
 
             with st.expander("📉 Ver gráfico DY vs CDI"):
                 if arquivos:
                     st.image(arquivos[0], caption="DY vs CDI", use_column_width=True)
                 else:
                     st.info("Gráfico não encontrado.")
+
 
             # Gerar sinais macro
             sinais = gerar_sinais_para_fundo(

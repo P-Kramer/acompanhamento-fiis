@@ -18,21 +18,32 @@ tabela_decisao = pd.DataFrame([
     {"inflexao_macro": "estavel", "dy_atual": "caiu", "tipo_correlacao": "inversa", "sinal": "Neutro"},
 ])
 
-# Função para detectar inflexão em uma série (últimos 21 dias úteis)
-def detectar_inflexao(serie, janela=21, limite=0.01):
-    serie = serie.dropna()
+def detectar_inflexao_macro(serie,limite=0.01):
+    serie = serie.dropna().sort_index()
+    acumulado = serie.sum()
+    print(serie)
+    print(acumulado)
+    print('-----------------')
+    if acumulado > limite:
+        return "subiu"
+    elif acumulado < -limite:
+        return "caiu"
+    else:
+        return "estavel"
+def detectar_inflexao_dy(serie, janela=21, limite=0.01):
+    serie = serie.dropna().sort_index()
     if len(serie) < janela:
         return "estavel"
-    recente = serie.iloc[-janela:]
-    delta = (recente.iloc[-1] - recente.iloc[0]) / abs(recente.iloc[0])
-    if delta > limite:
+    acumulado = serie.iloc[-janela:].sum()
+    if acumulado > limite:
         return "subiu"
-    elif delta < -limite:
+    elif acumulado < -limite:
         return "caiu"
     else:
         return "estavel"
 
-# Geração de sinais por fundo
+from dateutil.relativedelta import relativedelta
+
 def gerar_sinais_para_fundo(fundo_resultados, df_dy, df_macro, correlacoes_por_variavel, categoria, janela=21, limite=0.01):
     sinais = []
     for resultado in fundo_resultados:
@@ -40,15 +51,38 @@ def gerar_sinais_para_fundo(fundo_resultados, df_dy, df_macro, correlacoes_por_v
             for _, row in df_res.iterrows():
                 variavel = row["Variável"]
                 corr = row["Correlação"]
+                lag = int(row["Defasagem"])
                 tipo = correlacoes_por_variavel.get(variavel, {}).get(categoria)
+
                 if tipo is None or variavel not in df_macro.columns or fundo not in df_dy.columns:
                     continue
 
-                serie_macro = df_macro[variavel].dropna()
-                inflexao = detectar_inflexao(serie_macro, janela, limite)
+                # Inflexão da variável macro (com defasagem em MESES)
+                serie_macro = df_macro[["MesAno", variavel]].dropna()
+                serie_macro["MesAno"] = pd.to_datetime(serie_macro["MesAno"], format="%m/%Y", errors="coerce")
+                serie_macro.set_index("MesAno", inplace=True)
+                serie_macro = serie_macro[variavel].sort_index()
 
-                serie_dy = df_dy[fundo].dropna()
-                direcao_dy = detectar_inflexao(serie_dy, janela, limite)
+                try:
+                    ultima_data = serie_macro.index.max()
+                    data_fim = ultima_data - relativedelta(months=lag)
+                    data_inicio = data_fim - relativedelta(months=1)
+                    trecho_macro = serie_macro.loc[data_inicio:data_fim]
+                    #print(trecho_macro)
+                    inflexao = detectar_inflexao_macro(trecho_macro, limite)
+                except:
+                    inflexao = "estavel"
+
+                # Inflexão do DY atual (sem defasagem)
+                serie_dy = df_dy[["Data", fundo]].dropna()
+                serie_dy["Data"] = pd.to_datetime(serie_dy["Data"])
+                serie_dy.set_index("Data", inplace=True)
+                serie_dy = serie_dy[fundo].sort_index()
+
+                try:
+                    direcao_dy = detectar_inflexao_dy(serie_dy, janela, limite)
+                except:
+                    direcao_dy = "estavel"
 
                 linha = tabela_decisao[
                     (tabela_decisao["inflexao_macro"] == inflexao) &
@@ -60,7 +94,6 @@ def gerar_sinais_para_fundo(fundo_resultados, df_dy, df_macro, correlacoes_por_v
                     sinais.append((linha.iloc[0]["sinal"], abs(corr)))
     return sinais
 
-# Síntese final do sinal com ponderação
 def sintetizar_sinal_final(sinais):
     if not sinais:
         return "Neutro"
@@ -68,18 +101,19 @@ def sintetizar_sinal_final(sinais):
     resultado = df_sinais.groupby("sinal")["peso"].sum().sort_values(ascending=False)
     return resultado.idxmax()
 
-
-# Supondo que já estejam importados:
-# df_dy_diario: DataFrame com DYs diários
-# df_merged: variáveis macroeconômicas (também com base diária)
-# resultados: lista de correlações por fundo
-# correlacoes_por_variavel: tipo de correlação por variável e categoria
-
+# Importações externas
 from alfas import df_dy_diario
 from dados import df_merged
 from corr import resultados
 from dados import correlacoes_por_variavel
 
+# Pré-processamento do DY: diferenciar e manter coluna Data
+var_df_dy_diario = df_dy_diario.copy()
+for col in var_df_dy_diario.columns:
+    if col != "Data":
+        var_df_dy_diario[col] = var_df_dy_diario[col].diff()
+
+# Execução para uma categoria
 categoria = "Pós-fixado"
 sinais_categoria = []
 
@@ -87,7 +121,7 @@ for resultado in resultados.get(categoria, []):
     for fundo, _ in resultado.items():
         sinais = gerar_sinais_para_fundo(
             [resultado],
-            df_dy_diario,
+            var_df_dy_diario,  # <- DY agora tratado com diff()
             df_merged,
             correlacoes_por_variavel,
             categoria,
@@ -97,3 +131,5 @@ for resultado in resultados.get(categoria, []):
         decisao_final = sintetizar_sinal_final(sinais)
         sinais_categoria.append((fundo, decisao_final))
 
+print(f"Sinais para a categoria {categoria}")
+print(sinais_categoria)
