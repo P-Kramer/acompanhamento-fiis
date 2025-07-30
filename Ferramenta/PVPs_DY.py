@@ -3,52 +3,38 @@ from bs4 import BeautifulSoup
 import pandas as pd
 
 from lista_fundos_analisados import nomes_fundos_limpos
+from alfas import wb
+from alfas import precos
 
-# Função para puxar P/VP e Dividend Yield do Status Invest
-def get_pvp_e_dy(fii_ticker):
-    url = f"https://statusinvest.com.br/fundos-imobiliarios/{fii_ticker.lower()}"
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
+# Dicionário para armazenar os valores
+valores_patrimoniais = {}
 
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.text, "html.parser")
+# Itera por todas as abas do arquivo
+for sheet_name in wb.sheetnames:
+    if sheet_name in nomes_fundos_limpos:
+        try:
+            ws = wb[sheet_name]
+            valor = ws["N2"].value
 
-    pvp = None
-    dy = None
+            if valor is not None:
+                # Converte para float, tratando vírgula como separador decimal se necessário
+                valor_str = str(valor).replace(",", ".")
+                valor_float = float(valor_str)
+                valores_patrimoniais[sheet_name] = valor_float
+            else:
+                print(f"[{sheet_name}] Célula N2 vazia.")
+        except Exception as e:
+            print(f"[{sheet_name}] Erro ao ler N2: {e}")
 
-    indicadores = soup.select("div.top-info div.info")
-    for indicador in indicadores:
-        titulo = indicador.select_one("h3")
-        valor = indicador.select_one("strong")
-
-        if not titulo or not valor:
-            continue
-
-        titulo_text = titulo.text.strip()
-        valor_text = valor.text.strip().replace(",", ".").replace("%", "")
-
-        if "P/VP" in titulo_text:
-            try:
-                pvp = float(valor_text)
-            except:
-                pass
-        elif "Dividend Yield" in titulo_text:
-            try:
-                dy = float(valor_text) / 100
-            except:
-                pass
-
-    return pvp, dy
+from alfas import df_dy_diario
 
 # Criar dicionário com os dados
 dados_fiis = {}
 
-for fundo in nomes_fundos_limpos:
-    pvp, dy = get_pvp_e_dy(fundo)
+for fundo, nav in valores_patrimoniais.items():
     dados_fiis[fundo] = {
-        "PVP": pvp,
-        "Dividend_Yield": f'{round(dy*100,2)}%'
+        "PVP": precos[fundo].iloc[-1]/nav if fundo in precos else None,
+        "Dividend_Yield": f'{round(df_dy_diario[fundo].iloc[-1]*100,2)}%'
     }
 
 df_dados_fiis = pd.DataFrame.from_dict(dados_fiis, orient="index").reset_index().rename(columns={"index": "Fundo"})

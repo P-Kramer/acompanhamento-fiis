@@ -3,8 +3,10 @@ import json
 import urllib.request
 from datetime import datetime
 from functools import reduce
+from alfas import arquivo
 
-from variaveis import df_variaveis
+# Lê a aba "Variáveis"
+df_variaveis = pd.read_excel(arquivo, sheet_name="Variaveis")
 
 # Datas
 hoje = datetime.today()
@@ -80,6 +82,7 @@ url = 'https://www.policyuncertainty.com/media/Brazil_Policy_Uncertainty_Data.cs
 
 # Baixar o conteúdo do arquivo diretamente na memória
 response = urllib.request.urlopen(url)
+
 csv_data = response.read().decode('utf-8')
 
 # Ler os dados diretamente no pandas usando io.StringIO

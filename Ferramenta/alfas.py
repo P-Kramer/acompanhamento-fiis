@@ -109,4 +109,3 @@ df_dy_diario["Data"] = pd.to_datetime(df_dy_diario["Data"], errors="coerce")
 df_dy_diario["MesAno"] = df_dy_diario["Data"].dt.to_period("M").dt.to_timestamp()
 df_dy_mensal = df_dy_diario.drop(columns=["Data"]).groupby("MesAno").last()
 df_dy_mensal = df_dy_mensal.sort_index().round(4)
-
