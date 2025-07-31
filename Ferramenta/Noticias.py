@@ -1,4 +1,4 @@
-def pagina_noticias2():
+def pagina_FIIs():
     from main import menu_principal
     import streamlit as st
     import pandas as pd
@@ -77,7 +77,7 @@ def pagina_noticias2():
                 # Extrai dividendos só se a notícia for de cotistas E se ainda não pegou dividendo deste FII
                 if "cotistas" in titulo.lower() and dados_dividendos["Data-Base"] is None:
                     try:
-                        r_det = requests.get(noticia_info["Link"], headers=headers, timeout=15)
+                        r_det = requests.get(noticia_info["Link"], headers=headers, timeout=10)
                         soup = BeautifulSoup(r_det.text, "html.parser")
                         conteudo_pre = soup.find("pre", id="conteudoDetalhe")
                         if conteudo_pre:
@@ -123,21 +123,14 @@ def pagina_noticias2():
     st.title("🔍 Analisador de FIIs - Notícias e Dividendos")
 
     # --- Lista FIIs ---
-    todos_fiis =  [
-        'HGRU11', 'KEVE11', 'BTAL11', 'XPML11', 'JSRE11', 'TVRI11',
-        'RECR11', 'KNRI11', 'RBRF11', 'MXRF11', 'RZTR11', 'XPCI11', 'BRCO11', 'HGRE11', 'VGIR11',
-        'XPLG11', 'CPTS11', 'ALZR11', 'KFOF11', 'IRDM11', 'RBRR11', 'KNHF11', 'VISC11', 'HGLG11', 'VIUR11',
-        'BTLG11',  'KNHY11', 'MCCI11', 'RBRY11', 'KNSC11', 'PVBI11', 'HSML11', 'KNUQ11', 'KNCR11',
-        'LVBI11', 'FATN11', 'GGRC11', 'KORE11', 'TRXF11', 'HGCR11', 'HGFF11', 'VINO11', 'TGAR11', 'KNIP11',
-        'RBVA11', 'VILG11', 'VCJR11'
-    ]
+    from lista_fundos_analisados import nomes_fundos_limpos
 
     def init_session():
         if "favoritos" not in st.session_state:
             st.session_state.favoritos = carregar_favoritos()
         if "filtro" not in st.session_state:
             st.session_state.filtro = ""
-        for fii in todos_fiis:
+        for fii in nomes_fundos_limpos:
             if f"chk_{fii}" not in st.session_state:
                 st.session_state[f"chk_{fii}"] = False
 
@@ -157,7 +150,7 @@ def pagina_noticias2():
     data_final_str = data_final.strftime("%Y-%m-%d")
 
     filtro = st.text_input("🔎 Filtrar FIIs por nome ou ticker:", value=st.session_state.get("filtro", ""), key="filtro_input")
-    fiis_filtrados = [f for f in todos_fiis if st.session_state["filtro_input"].upper() in f.upper()]
+    fiis_filtrados = [f for f in nomes_fundos_limpos if st.session_state["filtro_input"].upper() in f.upper()]
     fiis_filtrados.sort()
 
     col1, col2, col3 = st.columns([1, 1, 2])
@@ -195,7 +188,7 @@ def pagina_noticias2():
                     key=f"chk_{fii}"
                 )
 
-    selecionados = [fii for fii in todos_fiis if st.session_state.get(f"chk_{fii}", False)]
+    selecionados = [fii for fii in nomes_fundos_limpos if st.session_state.get(f"chk_{fii}", False)]
 
     if st.button("🚀 Analisar Selecionados") and selecionados:
         with st.spinner("🔄 Coletando dados..."):
@@ -221,41 +214,86 @@ def pagina_noticias2():
             df_atuais = pd.DataFrame(dividendos_atuais)
 
             # Histórico dividendos
-            historico_path = "historico_dividendos.csv"
+            historico_path = r"C:\Users\User\Documents\OneDrive\Documentos\Guilherme\Códigos\Longview_FIIs\acompanhamento-fiis\Ferramenta\FIIs\historico_dividendos_formatado_string_virgula.csv"
+            colunas_hist = [
+                "Fundo", "Último Data-Base", "Último Pagamento", "Último Dividendo (R$)",
+                "Anterior Data-Base", "Anterior Pagamento", "Anterior Dividendo (R$)", "Status", "Link Relatório"
+            ]
+
             if os.path.exists(historico_path):
                 df_anterior = pd.read_csv(historico_path)
             else:
-                df_anterior = pd.DataFrame({
-                    "Fundo": todos_fiis,
-                    "Data-Base": [None] * len(todos_fiis),
-                    "Data Pagamento": [None] * len(todos_fiis),
-                    "Último Dividendo (R$)": [None] * len(todos_fiis)
-                })
+                df_anterior = pd.DataFrame(columns=colunas_hist)
 
-            # Marcar status e comparar
-            def comparar(row):
-                anterior = df_anterior[df_anterior["Fundo"] == row["Fundo"]]
-                if anterior.empty or pd.isna(anterior["Data-Base"].values[0]):
-                    return "NOVO"
-                elif row["Data-Base"] != anterior["Data-Base"].values[0]:
-                    return f"NOVA DATA-BASE (era {anterior['Data-Base'].values[0]})"
-                elif row["Último Dividendo (R$)"] != anterior["Último Dividendo (R$)"].values[0]:
-                    return f"VALOR ALTERADO (era {anterior['Último Dividendo (R$)'].values[0]})"
-                return "IGUAL"
+            def atualizar_historico(df_novo, df_hist):
+                novos_registros = []
+                for _, row in df_novo.iterrows():
+                    fundo = row["Fundo"]
+                    novo_db = row["Data-Base"]
+                    novo_pg = row["Data Pagamento"]
+                    novo_valor = row["Último Dividendo (R$)"]
+                    link = row.get("Link Relatório")
+                    anterior = df_hist[df_hist["Fundo"] == fundo]
+
+                    if anterior.empty and pd.notnull(novo_db):
+                        status = "NOVO"
+                        novos_registros.append({
+                            "Fundo": fundo,
+                            "Último Data-Base": novo_db,
+                            "Último Pagamento": novo_pg,
+                            "Último Dividendo (R$)": novo_valor,
+                            "Anterior Data-Base": None,
+                            "Anterior Pagamento": None,
+                            "Anterior Dividendo (R$)": None,
+                            "Link Relatório": link
+                        })
+                    elif not anterior.empty:
+                        ult_db = anterior["Último Data-Base"].values[0]
+                        ult_valor = anterior["Último Dividendo (R$)"].values[0]
+                        if (novo_db != ult_db or novo_valor != ult_valor) and pd.notnull(novo_db):
+                            status = "ATUALIZADO"
+                            novos_registros.append({
+                                "Fundo": fundo,
+                                "Último Data-Base": novo_db,
+                                "Último Pagamento": novo_pg,
+                                "Último Dividendo (R$)": novo_valor,
+                                "Anterior Data-Base": ult_db,
+                                "Anterior Pagamento": anterior["Último Pagamento"].values[0],
+                                "Anterior Dividendo (R$)": ult_valor,
+                                "Link Relatório": link
+                            })
+                        else:
+                            status = "SEM MUDANÇA"
+                            novos_registros.append({
+                                "Fundo": fundo,
+                                "Último Data-Base": ult_db,
+                                "Último Pagamento": anterior["Último Pagamento"].values[0],
+                                "Último Dividendo (R$)": ult_valor,
+                                "Anterior Data-Base": anterior["Anterior Data-Base"].values[0],
+                                "Anterior Pagamento": anterior["Anterior Pagamento"].values[0],
+                                "Anterior Dividendo (R$)": anterior["Anterior Dividendo (R$)"].values[0],
+                                "Link Relatório": anterior["Link Relatório"].values[0] if "Link Relatório" in anterior else None
+                            })
+                    elif pd.isnull(novo_db):
+                        status = "SEM DADOS"
+                        novos_registros.append({
+                            "Fundo": fundo,
+                            "Último Data-Base": None,
+                            "Último Pagamento": None,
+                            "Último Dividendo (R$)": None,
+                            "Anterior Data-Base": None,
+                            "Anterior Pagamento": None,
+                            "Anterior Dividendo (R$)": None,
+                            "Link Relatório": None
+                        })
+                return pd.DataFrame(novos_registros)
 
             if not df_atuais.empty:
-                df_atuais["Status"] = df_atuais.apply(comparar, axis=1)
+                df_atuais_atualizado = atualizar_historico(df_atuais, df_anterior)
+                df_atuais_atualizado.to_csv(historico_path, index=False)
+            else:
+                df_atuais_atualizado = df_anterior.copy()
 
-                # Atualiza df_anterior com os dados atuais
-                for _, row in df_atuais.iterrows():
-                    fundo = row["Fundo"]
-                    df_anterior.loc[df_anterior["Fundo"] == fundo, ["Data-Base", "Data Pagamento", "Último Dividendo (R$)"]] = (
-                        row["Data-Base"], row["Data Pagamento"], row["Último Dividendo (R$)"]
-                    )
-
-                df_anterior.to_csv(historico_path, index=False)
-
-            # Geração do Excel (como já estava)
             from openpyxl import load_workbook
             from openpyxl.styles import Font, Alignment, PatternFill, Border
             from openpyxl.utils import get_column_letter
@@ -263,7 +301,7 @@ def pagina_noticias2():
             buffer = BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 df_noticias.to_excel(writer, sheet_name="Notícias", index=False)
-                df_atuais.to_excel(writer, sheet_name="Dividendos", index=False)
+                df_atuais_atualizado.to_excel(writer, sheet_name="Dividendos", index=False)
             buffer.seek(0)
 
             wb = load_workbook(buffer)
@@ -294,17 +332,18 @@ def pagina_noticias2():
             wb.save(output)
             output.seek(0)
 
-            # Mostrar dividendos
-            st.markdown("---")
-            st.markdown("### 🔴 Comparativo de Dividendos")
+            # --- Exibição no Streamlit ---
+
+            st.markdown("### 📝 Notícias Recentes")
             with st.expander("Mostrar/Ocultar", expanded=True):
-                st.dataframe(df_atuais[["Fundo", "Data-Base", "Data Pagamento", "Último Dividendo (R$)", "Status", "Link Relatório"]]
+                if df_noticias.empty:
+                    st.info("Nenhuma notícia encontrada.")
+                else:
+                    st.dataframe(df_noticias
                         .rename(columns={
                             "Fundo": "Fundo",
-                            "Data-Base": "Data-Base",
-                            "Pagamento": "Pagamento",
-                            "Último Dividendo (R$)": "Último Dividendo (R$)",
-                            "Status": "Status"
+                            "Data": "Data",
+                            "Título": "Título"
                         })
                         .style.set_properties(**{'text-align': 'left'})
                         .set_table_styles([{
@@ -314,20 +353,57 @@ def pagina_noticias2():
                                     ('font-weight', 'bold')]
                         }]))
 
-                # Fundos com alteração
-                alterados = df_atuais[df_atuais["Status"].str.contains("ALTERADO|NOVA DATA-BASE", na=False)]
+            st.markdown("---")
+            st.markdown("### 🔴 Comparativo de Dividendos")
+            with st.expander("Mostrar/Ocultar", expanded=True):
+                colunas_exibidas = [
+                    "Fundo",
+                    "Anterior Data-Base", "Anterior Pagamento", "Anterior Dividendo (R$)",
+                    "Último Data-Base", "Último Pagamento", "Último Dividendo (R$)",
+                    "Link Relatório"
+                ]
+                st.dataframe(df_atuais_atualizado[colunas_exibidas]
+                    .style.set_properties(**{'text-align': 'left'})
+                    .set_table_styles([{
+                        'selector': 'th',
+                        'props': [('background-color', '#4472C4'),
+                                ('color', 'white'),
+                                ('font-weight', 'bold')]
+                    }])
+                )
+
+                # Conversão segura
+
+                # Padroniza separadores decimais (vírgula para ponto) antes de converter
+                div_ult_raw = df_atuais_atualizado["Último Dividendo (R$)"].astype(str).str.replace(",", ".")
+                div_ant_raw = df_atuais_atualizado["Anterior Dividendo (R$)"].astype(str).str.replace(",", ".")
+
+                # Converte para float com segurança
+                div_ult = pd.to_numeric(div_ult_raw, errors='coerce')
+                div_ant = pd.to_numeric(div_ant_raw, errors='coerce')
+
+                # Detecta alterações reais
+                diferenca = (div_ult != div_ant) & div_ult.notnull() & div_ant.notnull()
+                alterados = df_atuais_atualizado[diferenca]
+
+
                 if not alterados.empty:
-                    st.warning("🔴 Fundos com alteração nos dividendos:")
-                    for _, row in alterados.iterrows():
-                        st.markdown(
-                            f"- **{row['Fundo']}**: {row['Status']} → novo valor: **R$ {row['Último Dividendo (R$)']}** em {row['Data-Base']}"
-                        )
+                    st.warning("🔴 Fundos com alteração no valor do dividendo:")
+                    for idx, row in alterados.iterrows():
+                        fundo = row["Fundo"]
+                        ult_val = div_ult.loc[idx]
+                        ant_val = div_ant.loc[idx]
+                        try:
+                            st.write(f"📌 {fundo}: de R$ {ant_val:.2f} para R$ {ult_val:.2f}")
+                        except (ValueError, TypeError):
+                            st.write(f"📌 {fundo}: alteração detectada, mas falha ao formatar os valores.")
 
-                # Fundos sem dividendos encontrados
-                if "Encontrou Dividendo" in df_atuais.columns:
-                    nao_encontrados = df_atuais[df_atuais["Encontrou Dividendo"] == False]
-                    if not nao_encontrados.empty:
-                        st.info("ℹ️ Nenhuma notícia de dividendos encontrada para os seguintes fundos:")
-                        for fundo in nao_encontrados["Fundo"]:
-                            st.markdown(f"- {fundo}")
 
+        st.markdown("---")
+        st.markdown("### 📝 Baixar Excel com Dados")
+        st.download_button(
+            "⬇️ Baixar Planilha Completa",
+            data=output,
+            file_name="FIIs_noticias_dividendos.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )

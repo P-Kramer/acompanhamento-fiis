@@ -1,11 +1,6 @@
 import streamlit as st
-from FIIs.Noticias import pagina_FIIs
-from FIIs.Noticias2 import pagina_noticias2
+from Noticias import pagina_FIIs
 from pagina1 import pagina_resultados
-
-
-
-
 
 st.set_page_config("Ferramenta - Menu Principal", layout="centered")
 
@@ -88,5 +83,3 @@ elif st.session_state.pagina == "fiis":
     pagina_FIIs()
 elif st.session_state.pagina == "graficos":
     pagina_resultados()
-elif st.session_state.pagina == "modelagem":
-    pagina_noticias2()
