@@ -95,7 +95,7 @@ for nome_fundo in precos.columns:
                 if isinstance(cell, (datetime, pd.Timestamp)):
                     datas_desdobramento.append(pd.to_datetime(cell))
             for data_desdobramento in datas_desdobramento:
-                df_merge.loc[df_merge["Data"] < data_desdobramento, "DY_diario"] /= 10
+                df_merge.loc[df_merge["Data"] <= data_desdobramento, "DY_diario"] /= 10
 
         df_dy_diario = df_dy_diario.merge(
             df_merge[["Data", "DY_diario"]].rename(columns={"DY_diario": nome_fundo}),

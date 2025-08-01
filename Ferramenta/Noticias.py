@@ -294,44 +294,6 @@ def pagina_FIIs():
             else:
                 df_atuais_atualizado = df_anterior.copy()
 
-            from openpyxl import load_workbook
-            from openpyxl.styles import Font, Alignment, PatternFill, Border
-            from openpyxl.utils import get_column_letter
-
-            buffer = BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df_noticias.to_excel(writer, sheet_name="Notícias", index=False)
-                df_atuais_atualizado.to_excel(writer, sheet_name="Dividendos", index=False)
-            buffer.seek(0)
-
-            wb = load_workbook(buffer)
-            for ws in wb.worksheets:
-                header_font = Font(bold=True, color="FFFFFF", size=12)
-                header_fill = PatternFill("solid", fgColor="4472C4")
-                for cell in ws[1]:
-                    cell.font = header_font
-                    cell.fill = header_fill
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                    cell.border = Border()
-                for row in ws.iter_rows(min_row=2):
-                    for cell in row:
-                        cell.alignment = Alignment(horizontal="center", vertical="center")
-                        cell.border = Border()
-                for col in ws.columns:
-                    max_length = 0
-                    col_letter = get_column_letter(col[0].column)
-                    for cell in col:
-                        if cell.value is not None:
-                            value_length = len(str(cell.value))
-                            if value_length > max_length:
-                                max_length = value_length
-                    ws.column_dimensions[col_letter].width = max(15, min(max_length + 2, 80))
-                ws.sheet_view.showGridLines = False
-
-            output = BytesIO()
-            wb.save(output)
-            output.seek(0)
-
             # --- Exibição no Streamlit ---
 
             st.markdown("### 📝 Notícias Recentes")
@@ -389,15 +351,76 @@ def pagina_FIIs():
 
                 if not alterados.empty:
                     st.warning("🔴 Fundos com alteração no valor do dividendo:")
-                    for idx, row in alterados.iterrows():
-                        fundo = row["Fundo"]
-                        ult_val = div_ult.loc[idx]
-                        ant_val = div_ant.loc[idx]
-                        try:
-                            st.write(f"📌 {fundo}: de R$ {ant_val:.2f} para R$ {ult_val:.2f}")
-                        except (ValueError, TypeError):
-                            st.write(f"📌 {fundo}: alteração detectada, mas falha ao formatar os valores.")
+                    
+                    # Seleciona apenas colunas relevantes para exibir
+                    colunas_alteradas = [
+                        "Fundo",
+                        "Anterior Data-Base", "Anterior Pagamento", "Anterior Dividendo (R$)",
+                        "Último Data-Base", "Último Pagamento", "Último Dividendo (R$)",
+                        "Link Relatório"
+                    ]
+                    
+                    st.dataframe(
+                        alterados[colunas_alteradas]
+                        .style.set_properties(**{'text-align': 'left'})
+                        .set_table_styles([{
+                            'selector': 'th',
+                            'props': [('background-color', '#FFD966'),  # amarelo claro
+                                    ('color', 'black'),
+                                    ('font-weight', 'bold')]
+                        }])
+                    )
+                else:
+                    st.warning("🔄 Nenhum fundo sofreu alteração no valor do dividendo.")
+                
+                buffer = BytesIO()
+                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                    df_noticias.to_excel(writer, sheet_name="Notícias", index=False)
+                    df_atuais_atualizado.to_excel(writer, sheet_name="Dividendos", index=False)
+                buffer.seek(0)
 
+                from openpyxl import load_workbook
+                from openpyxl.styles import Font, Alignment, PatternFill, Border
+                from openpyxl.utils import get_column_letter
+
+                # Fundo com alteração detectada
+                fundos_alterados = set(alterados["Fundo"])
+
+                wb = load_workbook(buffer)
+                for ws in wb.worksheets:
+                    header_font = Font(bold=True, color="FFFFFF", size=12)
+                    header_fill = PatternFill("solid", fgColor="4472C4")
+                    destaque_fill = PatternFill("solid", fgColor="C0E6F5")  # Azul claro para linhas alteradas
+
+                    for cell in ws[1]:
+                        cell.font = header_font
+                        cell.fill = header_fill
+                        cell.alignment = Alignment(horizontal="center", vertical="center")
+                        cell.border = Border()
+
+                    for row in ws.iter_rows(min_row=2):
+                        fundo_cell = row[0].value  # Primeira coluna deve ser "Fundo"
+                        is_alterado = ws.title == "Dividendos" and fundo_cell in fundos_alterados
+                        for cell in row:
+                            cell.alignment = Alignment(horizontal="center", vertical="center")
+                            cell.border = Border()
+                            if is_alterado:
+                                cell.fill = destaque_fill
+
+                    for col in ws.columns:
+                        max_length = 0
+                        col_letter = get_column_letter(col[0].column)
+                        for cell in col:
+                            if cell.value is not None:
+                                value_length = len(str(cell.value))
+                                if value_length > max_length:
+                                    max_length = value_length
+                        ws.column_dimensions[col_letter].width = max(15, min(max_length + 2, 80))
+                    ws.sheet_view.showGridLines = False
+
+                output = BytesIO()
+                wb.save(output)
+                output.seek(0)
 
         st.markdown("---")
         st.markdown("### 📝 Baixar Excel com Dados")

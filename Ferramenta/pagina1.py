@@ -3,6 +3,7 @@ import pandas as pd
 import os
 from PIL import Image
 from glob import glob
+import matplotlib.pyplot as plt
 
 from top_fundos import df_ranking_final, df_score1, df_score2, df_score3, df_score4
 from lista_fundos_analisados import estrategias_fiis_reorganizado
@@ -11,7 +12,7 @@ from alfas import df_dy_diario
 from dados import df_merged, correlacoes_por_variavel
 from corr import resultados
 from teses_quant import resultados as resultados_teses_quant
-
+from alfas import df_dy_mensal, serie_cdi
 
 def pagina_resultados():
     st.set_page_config("📊 Sinais e Análises", layout="wide")
@@ -40,25 +41,51 @@ def pagina_resultados():
                 score = df_ranking_final[df_ranking_final["Fundo"] == fundo]["Score_Final"].values[0]
                 cor = "🟢" if score >= 6.5 else "🟡" if score >= 5 else "🔴"
                 st.markdown(f"### Score Final: **{score:.2f}** {cor}")
-                
-            from glob import glob
-            import os
 
-            # Caminho base completo
-            base_path = r"C:\Users\User\Documents\OneDrive\Documentos\Guilherme\Códigos\Longview_FIIs\acompanhamento-fiis\Ferramenta\Gráficos"
+            import altair as alt
 
-            # Buscar todos os PNGs da subpasta da categoria
-            arquivos = [
-                arq for arq in glob(f"{base_path}\\{categoria}\\*.png")
-                if fundo.upper() in os.path.basename(arq).upper()
-            ]
+            import altair as alt
 
             with st.expander("📉 Ver gráfico DY vs CDI"):
-                if arquivos:
-                    st.image(arquivos[0], caption="DY vs CDI", use_column_width=True)
-                else:
-                    st.info("Gráfico não encontrado.")
+                try:
+                    if fundo not in df_dy_mensal.columns:
+                        st.warning(f"Fundo {fundo} não encontrado em df_dy_mensal.")
+                    else:
+                        janela = 6
+                        min_periodos = 3
 
+                        # --- Suavização do DY e CDI ---
+                        dy_suavizado = df_dy_mensal[fundo].rolling(window=janela, min_periods=min_periodos).mean()
+                        cdi_suavizado = serie_cdi.rolling(window=janela, min_periods=min_periodos).mean()
+
+                        # --- Combinação em único DataFrame ---
+                        df_plot = pd.DataFrame({
+                            "MesAno": dy_suavizado.index,
+                            "DY": dy_suavizado.values,
+                            "CDI": cdi_suavizado.reindex(dy_suavizado.index).values
+                        }).dropna()
+
+                        if df_plot.empty:
+                            st.info("Dados insuficientes para gerar o gráfico.")
+                        else:
+                            df_long = df_plot.melt(id_vars="MesAno", var_name="Indicador", value_name="Valor")
+                            df_long["MesAno"] = pd.to_datetime(df_long["MesAno"], errors="coerce")
+
+                            chart = alt.Chart(df_long).mark_line().encode(
+                                x=alt.X("MesAno:T", title="MesAno"),
+                                y=alt.Y("Valor:Q", title="Taxa anualizada"),
+                                color=alt.Color("Indicador:N", scale=alt.Scale(scheme="category10")),
+                                tooltip=["MesAno:T", "Indicador:N", "Valor:Q"]
+                            ).properties(
+                                title=f"{fundo} – DY vs CDI",
+                                width=800,
+                                height=350
+                            ).interactive()
+
+                            st.altair_chart(chart, use_container_width=True)
+
+                except Exception as e:
+                    st.warning(f"Erro ao gerar gráfico dinâmico: {e}")
 
             # Gerar sinais macro
             sinais = gerar_sinais_para_fundo(
