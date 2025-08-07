@@ -1,12 +1,13 @@
 # Reimportar bibliotecas após reset
 import pandas as pd
 import numpy as np
+import streamlit as st
 
 from dados import df_merged
 from alfas import df_dy_mensal
-from lista_fundos_analisados import estrategias_fiis_reorganizado
 from dados import correlacoes_por_variavel
 
+estrategias_fiis_reorganizado = st.session_state.get("estrategias_fiis_reorganizado")
 
 def calcular_correlacoes(
     df_variaveis: pd.DataFrame,

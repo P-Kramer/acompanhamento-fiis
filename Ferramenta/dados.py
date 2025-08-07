@@ -3,7 +3,9 @@ import json
 import urllib.request
 from datetime import datetime
 from functools import reduce
-from alfas import arquivo
+import streamlit as st
+
+arquivo = st.session_state.get("arquivo")
 
 # Lê a aba "Variáveis"
 df_variaveis = pd.read_excel(arquivo, sheet_name="Variaveis")

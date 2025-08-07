@@ -6,6 +6,7 @@ import os
 from Noticias import pagina_FIIs
 from analises import pagina_resultados
 from ranking import pagina_ranking
+from pagina_inicial import pagina_inicial
 
 # Configuração geral da página
 st.set_page_config("Ferramenta de Análise de FIIs", layout="wide")
@@ -66,41 +67,11 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-
-# PÁGINAS
-def pagina_inicial():
-    st.markdown("""
-    <style>
-    .intro-box {
-        background-color: #f9f9f9;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-        font-family: 'Segoe UI', sans-serif;
-        color: #333;
-        line-height: 1.6;
-    }
-    .intro-box h1 {
-        font-size: 2.2rem;
-        color: #222;
-        margin-bottom: 1rem;
-    }
-    .intro-box p {
-        font-size: 1.1rem;
-        margin-bottom: 0.8rem;
-    }
-    </style>
-    <div class='intro-box'>
-        <h1>📊 Ferramenta de Análise de FIIs</h1>
-        <p>Esta plataforma combina inteligência macroeconômica e desempenho quantitativo para gerar insights de investimento em fundos imobiliários.</p>
-        <p>Utilize o menu à esquerda para:</p>
-        <p>🔍 Acompanhar <strong>divulgações e dividendos</strong> mais recentes dos FIIs.</p>
-        <p>📈 Explorar <strong>correlações com variáveis macro</strong> e sinais quantitativos de entrada ou saída.</p>
-        <p>⚙️ Ajustar <strong>premissas da análise</strong> (em breve).</p>
-    </div>
-    """, unsafe_allow_html=True)
-
 def pagina_premissas():
+    if not st.session_state.get("arquivo", False):
+        st.warning("⚠ Por favor, carregue o arquivo na Página Inicial antes de continuar.")
+        st.stop()
+
     st.markdown("<h2>⚙️ Ranking</h2>", unsafe_allow_html=True)
     st.info("Esta seção está em desenvolvimento.")
 

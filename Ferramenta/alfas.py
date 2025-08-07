@@ -3,9 +3,12 @@ from datetime import datetime, timedelta
 import urllib.request
 import json
 from openpyxl import load_workbook
+import streamlit as st
 
-# Carregamento dos dados importados
-from lista_fundos_analisados import df_precos, fundos_raw, nomes_fundos_limpos, arquivo
+arquivo = st.session_state.get("arquivo")
+df_precos = st.session_state.get("df_precos")
+fundos_raw = st.session_state.get("fundos_raw")
+nomes_fundos_limpos = st.session_state.get("nomes_fundos_limpos")
 
 # Tratamento dos preços
 precos = df_precos.iloc[6:, 1:2+len(fundos_raw)].copy()

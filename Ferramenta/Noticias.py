@@ -120,7 +120,7 @@ def pagina_FIIs():
     st.title("🔍 Analisador de FIIs - Notícias e Dividendos")
 
     # --- Lista FIIs ---
-    from lista_fundos_analisados import nomes_fundos_limpos
+    nomes_fundos_limpos = st.session_state.get("nomes_fundos_limpos")
 
     def init_session():
         if "favoritos" not in st.session_state:

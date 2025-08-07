@@ -1,4 +1,4 @@
-import pandas as pd
+"""import pandas as pd
 import os
 
 # Caminho do arquivo
@@ -26,4 +26,4 @@ for fundo, categoria in estrategias_fiis.items():
 
 # (Opcional) Ordenar os tickers dentro de cada categoria
 for fundos in estrategias_fiis_reorganizado.values():
-    fundos.sort()
+    fundos.sort()"""

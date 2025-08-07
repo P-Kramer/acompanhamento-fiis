@@ -6,7 +6,6 @@ from glob import glob
 import matplotlib.pyplot as plt
 
 from top_fundos import df_ranking_final, df_score1, df_score2, df_score3, df_score4
-from lista_fundos_analisados import estrategias_fiis_reorganizado
 from pontos_macro import gerar_sinais_para_fundo, sintetizar_sinal_final
 from alfas import df_dy_diario
 from dados import df_merged, correlacoes_por_variavel
@@ -18,6 +17,7 @@ from top_fundos import ranking_antigo, ranking_atual
 from teses_quant import df_resultado
 from pontos_macro import sinais_categoria
 
+estrategias_fiis_reorganizado = st.session_state.get("estrategias_fiis_reorganizado")
 resultados_teses_macro = [{"Fundo": fundo, "Sinal": sinal.strip().capitalize()} for fundo, sinal in sinais_categoria]
 
 def pagina_resultados():
