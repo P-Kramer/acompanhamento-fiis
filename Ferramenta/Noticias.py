@@ -225,6 +225,32 @@ def pagina_FIIs():
             st.write("📄 Arquivo esperado:", historico_path)
             st.write("✅ Arquivo existe?", historico_path.exists())
 
+            # Caminho do arquivo
+            from pathlib import Path
+            import pandas as pd
+            import streamlit as st
+
+            historico_path = Path(__file__).parent / "historico_dividendos_formatado_string_virgula.csv"
+
+            # Leitura + debug visual
+            if historico_path.exists():
+                df_anterior = pd.read_csv(historico_path)
+                st.success("✅ CSV lido com sucesso.")
+                st.markdown("### 📄 Conteúdo bruto do histórico de dividendos:")
+                st.dataframe(df_anterior)
+
+                st.markdown("### 🔍 Tipos de dados detectados:")
+                st.text(df_anterior.dtypes)
+
+                st.markdown("### 📊 Primeiras linhas:")
+                st.dataframe(df_anterior.head())
+
+                st.markdown("### 🔚 Últimas linhas:")
+                st.dataframe(df_anterior.tail())
+            else:
+                st.error("❌ Arquivo de histórico não encontrado.")
+
+
             # Leitura segura
             if historico_path.exists():
                 st.success("✅ Entrou no IF: arquivo encontrado e será lido.")
