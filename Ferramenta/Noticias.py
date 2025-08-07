@@ -9,6 +9,7 @@ def pagina_FIIs():
     from io import BytesIO
     import json
     import base64
+    from pathlib import Path
 
     # --- Persistência de Favoritos ---
     CAMINHO_FAVORITOS = "favoritos.json"
@@ -206,7 +207,7 @@ def pagina_FIIs():
             df_atuais = pd.DataFrame(dividendos_atuais)
 
             # Histórico dividendos
-            historico_path = os.path.abspath("historico_dividendos_formatado_string_virgula.csv")
+            historico_path = Path(__file__).parent / "historico_dividendos_formatado_string_virgula.csv"
             colunas_hist = [
                 "Fundo", "Último Data-Base", "Último Pagamento", "Último Dividendo (R$)",
                 "Anterior Data-Base", "Anterior Pagamento", "Anterior Dividendo (R$)", "Status", "Link Relatório"
