@@ -207,6 +207,9 @@ def pagina_FIIs():
             df_atuais = pd.DataFrame(dividendos_atuais)
 
             # Histórico dividendos
+            st.write("Arquivo esperado:", historico_path)
+            st.write("Existe?", historico_path.exists())
+
             historico_path = Path(__file__).parent / "historico_dividendos_formatado_string_virgula.csv"
             colunas_hist = [
                 "Fundo", "Último Data-Base", "Último Pagamento", "Último Dividendo (R$)",
