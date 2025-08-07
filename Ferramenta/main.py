@@ -9,9 +9,8 @@ from analises import pagina_resultados
 # Configuração geral da página
 st.set_page_config("Ferramenta de Análise de FIIs", layout="wide")
 
-# Caminho da logo
-logo_path = os.path.abspath("logo_sidebar.png")
-logo_img = Image.open(logo_path) if os.path.exists(logo_path) else None
+logo_path = Path(__file__).parent / "logo_sidebar.png"
+logo_img = Image.open(logo_path) if logo_path.exists() else None
 
 
 with st.sidebar:
