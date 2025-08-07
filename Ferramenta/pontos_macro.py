@@ -60,7 +60,7 @@ def detectar_inflexao_dy(serie, limite, janela=21):
 
 from dateutil.relativedelta import relativedelta
 
-def gerar_sinais_para_fundo(fundo_resultados, df_dy, df_macro, correlacoes_por_variavel, categoria, janela=21):
+def gerar_sinais_para_fundo(fundo_resultados, df_dy, df_macro, categoria, janela):
     sinais = []
     for resultado in fundo_resultados:
         for fundo, df_res in resultado.items():
@@ -68,7 +68,8 @@ def gerar_sinais_para_fundo(fundo_resultados, df_dy, df_macro, correlacoes_por_v
                 variavel = row["Variável"]
                 corr = row["Correlação"]
                 lag = int(row["Defasagem"])
-                tipo = correlacoes_por_variavel.get(variavel, {}).get(categoria)
+                tipo = "direta" if corr >= 0 else "inversa"
+
 
 
                 if tipo is None or variavel not in df_macro.columns or fundo not in df_dy.columns:
@@ -139,18 +140,92 @@ for col in var_df_dy_diario.columns:
         var_df_dy_diario[col] = var_df_dy_diario[col].diff()
 
 # Execução para uma categoria
-categoria = "Inflação"
+categorias = ["Pós-fixado", "Inflação", "Tijolo", "Carrego"]
 sinais_categoria = []
+for categoria in categorias:
+    for resultado in resultados.get(categoria, []):
+        for fundo, _ in resultado.items():
+            sinais = gerar_sinais_para_fundo(
+                [resultado],
+                var_df_dy_diario,  # <- DY agora tratado com diff()
+                df_merged,
+                categoria,
+                21,
+            )
+            decisao_final = sintetizar_sinal_final(sinais)
+            sinais_categoria.append((fundo, decisao_final))
 
-for resultado in resultados.get(categoria, []):
-    for fundo, _ in resultado.items():
-        sinais = gerar_sinais_para_fundo(
-            [resultado],
-            var_df_dy_diario,  # <- DY agora tratado com diff()
-            df_merged,
-            correlacoes_por_variavel,
-            categoria,
-            janela=21,
-        )
-        decisao_final = sintetizar_sinal_final(sinais)
-        sinais_categoria.append((fundo, decisao_final))
+
+from dateutil.relativedelta import relativedelta
+import pandas as pd
+
+def analisar_variavel_macro(fundo, variavel, categoria, df_dy, df_macro, resultados, correlacoes_por_variavel, janela=21):
+    # 1. Correlação e defasagem
+    correlacao = None
+    defasagem = None
+    for resultado in resultados.get(categoria, []):
+        if fundo in resultado:
+            df_res = resultado[fundo]
+            linha = df_res[df_res["Variável"] == variavel]
+            if not linha.empty:
+                correlacao = linha.iloc[0]["Correlação"]
+                defasagem = int(linha.iloc[0]["Defasagem"])
+                break
+
+    if correlacao is None:
+        print(f"⚠️ Nenhuma correlação entre {variavel} e {fundo} encontrada.")
+        return
+
+    tipo_correlacao = correlacoes_por_variavel.get(variavel, {}).get(categoria, "desconhecida")
+
+    # 2. Série macro com defasagem
+    serie_macro = df_macro[["MesAno", variavel]].dropna()
+    serie_macro["MesAno"] = pd.to_datetime(serie_macro["MesAno"], format="%m/%Y", errors="coerce")
+    serie_macro.set_index("MesAno", inplace=True)
+    serie_macro = serie_macro[variavel].sort_index()
+
+    ultima_data = serie_macro.index.max()
+    data_fim = ultima_data - relativedelta(months=defasagem)
+    data_inicio = data_fim - relativedelta(months=1)
+    trecho_macro = serie_macro.loc[data_inicio:data_fim]
+
+    limite_macro = (serie_macro - serie_macro.mean()).abs().mean()
+    direcao_macro = detectar_inflexao_macro(trecho_macro, limite_macro)
+
+    # 3. Série DY tratada
+    serie_dy = df_dy[["Data", fundo]].dropna()
+    serie_dy["Data"] = pd.to_datetime(serie_dy["Data"])
+    serie_dy.set_index("Data", inplace=True)
+    serie_dy = serie_dy[fundo].sort_index()
+    serie_dy_diff = serie_dy.diff()
+    limite_dy = (serie_dy_diff - serie_dy_diff.mean()).abs().mean()
+    direcao_dy = detectar_inflexao_dy(serie_dy_diff, limite_dy, janela)
+
+    # 4. Buscar sinal da tabela
+    linha_sinal = tabela_decisao[
+        (tabela_decisao["inflexao_macro"] == direcao_macro) &
+        (tabela_decisao["dy_atual"] == direcao_dy) &
+        (tabela_decisao["tipo_correlacao"] == tipo_correlacao)
+    ]
+
+    sinal = linha_sinal.iloc[0]["sinal"] if not linha_sinal.empty else "Neutro"
+
+    # 5. Exibir
+    print(f"📊 Análise para fundo: {fundo}")
+    print(f"Variável macro: {variavel}")
+    print(f"Correlação: {correlacao:.2f} | Tipo: {tipo_correlacao} | Defasagem: {defasagem} meses")
+    print(f"Trecho macro considerado:\n{trecho_macro}")
+    print(f"Inflexão macro detectada: {direcao_macro}")
+    print(f"Inflexão DY detectada: {direcao_dy}")
+    print(f"✅ Sinal sugerido: {sinal}")
+
+"""print(analisar_variavel_macro(
+    fundo="KNCR11",
+    variavel="Selic",
+    categoria="Pós-fixado",
+    df_dy=var_df_dy_diario,
+    df_macro=df_merged,
+    resultados=resultados,
+    correlacoes_por_variavel=correlacoes_por_variavel
+))"""
+

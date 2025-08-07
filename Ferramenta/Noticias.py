@@ -1,5 +1,4 @@
 def pagina_FIIs():
-    from main import menu_principal
     import streamlit as st
     import pandas as pd
     import requests
@@ -10,13 +9,6 @@ def pagina_FIIs():
     from io import BytesIO
     import json
     import base64
-
-    if st.button("⬅️ Voltar ao menu", key="btn_voltar_menu_fiis"):
-        st.session_state.pagina = "menu"
-        
-    if st.session_state.pagina == "menu":
-        menu_principal()
-        st.rerun()
 
     # --- Persistência de Favoritos ---
     CAMINHO_FAVORITOS = "favoritos.json"
@@ -226,18 +218,30 @@ def pagina_FIIs():
                 df_anterior = pd.DataFrame(columns=colunas_hist)
 
             def atualizar_historico(df_novo, df_hist):
-                novos_registros = []
-                for _, row in df_novo.iterrows():
-                    fundo = row["Fundo"]
-                    novo_db = row["Data-Base"]
-                    novo_pg = row["Data Pagamento"]
-                    novo_valor = row["Último Dividendo (R$)"]
-                    link = row.get("Link Relatório")
-                    anterior = df_hist[df_hist["Fundo"] == fundo]
+                fundos_existentes = set(df_hist["Fundo"])
+                fundos_processados = set(df_novo["Fundo"])
+                todos_fundos = fundos_existentes.union(fundos_processados)
 
-                    if anterior.empty and pd.notnull(novo_db):
-                        status = "NOVO"
-                        novos_registros.append({
+                registros_atualizados = []
+
+                for fundo in todos_fundos:
+                    linha_nova = df_novo[df_novo["Fundo"] == fundo]
+                    linha_antiga = df_hist[df_hist["Fundo"] == fundo]
+
+                    if linha_nova.empty:
+                        # Caso 5: fundo não foi processado nessa rodada
+                        if not linha_antiga.empty:
+                            registros_atualizados.append(linha_antiga.iloc[0].to_dict())
+                        continue
+
+                    novo_db = linha_nova["Data-Base"].values[0]
+                    novo_pg = linha_nova["Data Pagamento"].values[0]
+                    novo_valor = linha_nova["Último Dividendo (R$)"].values[0]
+                    link = linha_nova["Link Relatório"].values[0]
+
+                    if linha_antiga.empty:
+                        # Caso 1: fundo novo
+                        registros_atualizados.append({
                             "Fundo": fundo,
                             "Último Data-Base": novo_db,
                             "Último Pagamento": novo_pg,
@@ -247,52 +251,66 @@ def pagina_FIIs():
                             "Anterior Dividendo (R$)": None,
                             "Link Relatório": link
                         })
-                    elif not anterior.empty:
-                        ult_db = anterior["Último Data-Base"].values[0]
-                        ult_valor = anterior["Último Dividendo (R$)"].values[0]
-                        if (novo_db != ult_db or novo_valor != ult_valor) and pd.notnull(novo_db):
-                            status = "ATUALIZADO"
-                            novos_registros.append({
-                                "Fundo": fundo,
-                                "Último Data-Base": novo_db,
-                                "Último Pagamento": novo_pg,
-                                "Último Dividendo (R$)": novo_valor,
-                                "Anterior Data-Base": ult_db,
-                                "Anterior Pagamento": anterior["Último Pagamento"].values[0],
-                                "Anterior Dividendo (R$)": ult_valor,
-                                "Link Relatório": link
-                            })
+                    else:
+                        # Fundo já existia, comparar para ver se atualiza
+                        ult_db = linha_antiga["Último Data-Base"].values[0]
+                        ult_pg = linha_antiga["Último Pagamento"].values[0]
+                        ult_valor = linha_antiga["Último Dividendo (R$)"].values[0]
+                        ant_db = linha_antiga["Anterior Data-Base"].values[0]
+                        ant_pg = linha_antiga["Anterior Pagamento"].values[0]
+                        ant_valor = linha_antiga["Anterior Dividendo (R$)"].values[0]
+                        link_antigo = linha_antiga["Link Relatório"].values[0] if "Link Relatório" in linha_antiga else None
+
+                        if pd.notnull(novo_db):
+                            if (novo_db != ult_db) or (str(novo_valor).replace(",", ".") != str(ult_valor).replace(",", ".")):
+                                # Casos 2 e 4: nova distribuição (data nova OU valor diferente)
+                                registros_atualizados.append({
+                                    "Fundo": fundo,
+                                    "Último Data-Base": novo_db,
+                                    "Último Pagamento": novo_pg,
+                                    "Último Dividendo (R$)": novo_valor,
+                                    "Anterior Data-Base": ult_db,
+                                    "Anterior Pagamento": ult_pg,
+                                    "Anterior Dividendo (R$)": ult_valor,
+                                    "Link Relatório": link
+                                })
+                            else:
+                                # Caso 3: nada mudou de fato
+                                registros_atualizados.append({
+                                    "Fundo": fundo,
+                                    "Último Data-Base": ult_db,
+                                    "Último Pagamento": ult_pg,
+                                    "Último Dividendo (R$)": ult_valor,
+                                    "Anterior Data-Base": ant_db,
+                                    "Anterior Pagamento": ant_pg,
+                                    "Anterior Dividendo (R$)": ant_valor,
+                                    "Link Relatório": link_antigo
+                                })
                         else:
-                            status = "SEM MUDANÇA"
-                            novos_registros.append({
+                            # Caso 6: fundo foi processado mas sem dados novos
+                            registros_atualizados.append({
                                 "Fundo": fundo,
                                 "Último Data-Base": ult_db,
-                                "Último Pagamento": anterior["Último Pagamento"].values[0],
+                                "Último Pagamento": ult_pg,
                                 "Último Dividendo (R$)": ult_valor,
-                                "Anterior Data-Base": anterior["Anterior Data-Base"].values[0],
-                                "Anterior Pagamento": anterior["Anterior Pagamento"].values[0],
-                                "Anterior Dividendo (R$)": anterior["Anterior Dividendo (R$)"].values[0],
-                                "Link Relatório": anterior["Link Relatório"].values[0] if "Link Relatório" in anterior else None
+                                "Anterior Data-Base": ant_db,
+                                "Anterior Pagamento": ant_pg,
+                                "Anterior Dividendo (R$)": ant_valor,
+                                "Link Relatório": link_antigo
                             })
-                    elif pd.isnull(novo_db):
-                        status = "SEM DADOS"
-                        novos_registros.append({
-                            "Fundo": fundo,
-                            "Último Data-Base": None,
-                            "Último Pagamento": None,
-                            "Último Dividendo (R$)": None,
-                            "Anterior Data-Base": None,
-                            "Anterior Pagamento": None,
-                            "Anterior Dividendo (R$)": None,
-                            "Link Relatório": None
-                        })
-                return pd.DataFrame(novos_registros)
+
+                return pd.DataFrame(registros_atualizados)
+
+
 
             if not df_atuais.empty:
                 df_atuais_atualizado = atualizar_historico(df_atuais, df_anterior)
                 df_atuais_atualizado.to_csv(historico_path, index=False)
             else:
                 df_atuais_atualizado = df_anterior.copy()
+
+            df_exibicao = df_atuais_atualizado[df_atuais_atualizado["Fundo"].isin(df_atuais["Fundo"])]
+
 
             # --- Exibição no Streamlit ---
 
@@ -324,7 +342,7 @@ def pagina_FIIs():
                     "Último Data-Base", "Último Pagamento", "Último Dividendo (R$)",
                     "Link Relatório"
                 ]
-                st.dataframe(df_atuais_atualizado[colunas_exibidas]
+                st.dataframe(df_exibicao[colunas_exibidas]
                     .style.set_properties(**{'text-align': 'left'})
                     .set_table_styles([{
                         'selector': 'th',
@@ -337,8 +355,8 @@ def pagina_FIIs():
                 # Conversão segura
 
                 # Padroniza separadores decimais (vírgula para ponto) antes de converter
-                div_ult_raw = df_atuais_atualizado["Último Dividendo (R$)"].astype(str).str.replace(",", ".")
-                div_ant_raw = df_atuais_atualizado["Anterior Dividendo (R$)"].astype(str).str.replace(",", ".")
+                div_ult_raw = df_exibicao["Último Dividendo (R$)"].astype(str).str.replace(",", ".")
+                div_ant_raw = df_exibicao["Anterior Dividendo (R$)"].astype(str).str.replace(",", ".")
 
                 # Converte para float com segurança
                 div_ult = pd.to_numeric(div_ult_raw, errors='coerce')
@@ -346,7 +364,7 @@ def pagina_FIIs():
 
                 # Detecta alterações reais
                 diferenca = (div_ult != div_ant) & div_ult.notnull() & div_ant.notnull()
-                alterados = df_atuais_atualizado[diferenca]
+                alterados = df_exibicao[diferenca]
 
 
                 if not alterados.empty:
@@ -376,7 +394,7 @@ def pagina_FIIs():
                 buffer = BytesIO()
                 with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                     df_noticias.to_excel(writer, sheet_name="Notícias", index=False)
-                    df_atuais_atualizado.to_excel(writer, sheet_name="Dividendos", index=False)
+                    df_exibicao.to_excel(writer, sheet_name="Dividendos", index=False)
                 buffer.seek(0)
 
                 from openpyxl import load_workbook

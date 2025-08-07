@@ -58,6 +58,8 @@ for _, row in df_variaveis.iterrows():
             elif transformacao == 'Diff':
                 df_proc[nome] = df_proc[nome].diff()
                 df_proc = df_proc.dropna()
+            elif transformacao == "Outro":
+                df_proc = df_proc.dropna()
 
             # Adiciona coluna MesAno
             df_proc["MesAno"] = df_proc["Data"].dt.strftime("%m/%Y")
@@ -117,3 +119,5 @@ df_merged["MesAno"] = df_merged["MesAno"].dt.strftime("%m/%Y")
 # Agora você tem:
 # df_merged → base com as variáveis macroeconômicas
 # correlacoes_por_variavel → dicionário com a correlação esperada por categoria
+
+print(df_merged[['MesAno',"PIB"]].tail(30))

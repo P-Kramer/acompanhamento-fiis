@@ -144,3 +144,46 @@ df_ranking_final = df_score_final.drop(columns=["Data"]).mean().sort_values(asce
 df_ranking_final = pd.DataFrame(df_ranking_final, columns=[f"Score_Final"])
 df_ranking_final.reset_index(inplace=True)
 df_ranking_final.columns = ["Fundo", f"Score_Final"]
+
+# Define janela de 5 dias úteis, mas deslocada para 21 dias atrás
+dias_atras = 21
+
+# Verifica se há dados suficientes
+if len(df_score1) >= dias_atras + dias:
+    data_base = df_score1.iloc[-(dias_atras + dias)]["Data"]
+    datas_retroativas = df_score1[df_score1["Data"] >= data_base].head(dias)["Data"].tolist()
+
+    # Inicializa novo DataFrame
+    df_score_retroativo = pd.DataFrame({"Data": datas_retroativas})
+
+    for fundo in df_score1.columns:
+        if fundo == "Data":
+            continue
+
+        media_1 = df_score1[df_score1["Data"].isin(datas_retroativas)][fundo].mean()
+        media_2 = df_score2[df_score2["Data"].isin(datas_retroativas)][fundo].mean()
+        media_3 = df_score3[df_score3["Data"].isin(datas_retroativas)][fundo].mean()
+        media_4 = df_score4[df_score4["Data"].isin(datas_retroativas)][fundo].mean()
+
+        score_final = (
+            peso_1 * media_1 +
+            peso_2 * media_2 +
+            peso_3 * media_3 +
+            peso_4 * media_4
+        )
+
+        df_score_retroativo[fundo] = [round(score_final, 2)] * dias
+
+    # Cria ranking retroativo
+    df_ranking_retroativo = df_score_retroativo.drop(columns=["Data"]).mean().sort_values(ascending=False)
+    df_ranking_retroativo = pd.DataFrame(df_ranking_retroativo, columns=[f"Score_21d_atras"])
+    df_ranking_retroativo.reset_index(inplace=True)
+    df_ranking_retroativo.columns = ["Fundo", f"Score_21d_atras"]
+else:
+    print("Não há dados suficientes para calcular o ranking 21 dias atrás.")
+
+# Criação dos rankings numéricos
+ranking_atual = {f: i + 1 for i, f in enumerate(df_ranking_final["Fundo"])}
+ranking_antigo = {f: i + 1 for i, f in enumerate(df_ranking_retroativo["Fundo"])}
+
+

@@ -1,85 +1,115 @@
 import streamlit as st
+from pathlib import Path
+from PIL import Image
+
 from Noticias import pagina_FIIs
-from pagina1 import pagina_resultados
+from analises import pagina_resultados
 
-st.set_page_config("Ferramenta - Menu Principal", layout="centered")
+# Configuração geral da página
+st.set_page_config("Ferramenta de Análise de FIIs", layout="wide")
 
-def menu_principal():
+# Caminho da logo
+logo_path = Path(r"C:\Users\User\Documents\OneDrive\Documentos\Guilherme\Códigos\Longview_FIIs\acompanhamento-fiis\Ferramenta\logo_sidebar.png")
+logo_img = Image.open(logo_path) if logo_path.exists() else None
+
+with st.sidebar:
     st.markdown("""
     <style>
-    /* Centraliza toda a área do menu */
-    .menu-flex {
-        display: flex;
-        justify-content: center;
-        gap: 2.5rem;
-        margin-top: 2.3rem;
-        margin-bottom: 2.3rem;
-        flex-wrap: wrap;
+    [data-testid="stSidebar"] {
+        background-color: #3a3a3a;
+        border-right: 1px solid #ddd;
     }
-    /* Estilo dos botões grandes */
-    .stButton > button, .big-btn {
-        background: linear-gradient(135deg, #22253b 60%, #393b5b 100%);
-        color: #fff;
-        font-size: 1.45em !important;
-        font-weight: 700 !important;
-        border: none;
-        border-radius: 2.2em !important;
-        padding: 1.5em 2.7em !important;
-        box-shadow: 0 6px 26px #0003;
-        transition: transform 0.13s, box-shadow 0.21s, background 0.27s;
-        cursor: pointer;
-        outline: none;
-        min-width: 210px;
-        min-height: 100px;
-        margin-bottom: 0.6em;
-        margin-top: 0.6em;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.7em;
-        letter-spacing: 0.01em;
-        white-space: nowrap;
+
+    [data-testid="stSidebar"] * {
+        color: #ffffff !important;
     }
-    .stButton > button:hover, .big-btn:hover {
-        background: linear-gradient(135deg, #393b5b 60%, #22253b 100%);
-        transform: scale(1.055);
-        box-shadow: 0 8px 30px #0005;
+
+    div[data-testid="stSidebar"] label:hover {
+        background-color: #4a4a4a;
+        color: #ffffff !important;
     }
-    /* Garante que os ícones fiquem centralizados */
-    .big-btn span.emoji {
-        font-size: 1.4em;
-        margin-right: 0.5em;
-        vertical-align: middle;
-        line-height: 1;
+
+    div[data-testid="stSidebar"] input:checked + div > label {
+        background-color: #444;
+        font-weight: 600;
+        border-left: 4px solid #5e9bff;
+        color: #ffffff !important;
+    }
+
+    .logo-container {
+        text-align: center;
+        margin-bottom: 1.5rem;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    st.markdown("<h1 style='font-size:2.7em; margin-bottom:0.4em;'>🛠️ Ferramenta - Menu Principal</h1>", unsafe_allow_html=True)
-    st.write("Escolha um módulo para acessar:")
+    # ✅ Exibir logo centralizada e maior
+    if logo_img:
+        st.markdown("<div class='logo-container'>", unsafe_allow_html=True)
+        st.image(logo_img, width=140)  # Aumente o width aqui conforme desejar
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.warning("Logo não encontrada.")
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("📊 FIIs"):
-            st.session_state.pagina = "fiis"
-            st.rerun()
-    with col2:
-        if st.button("📈 Gráficos"):
-            st.session_state.pagina = "graficos"
-    with col3:
-        if st.button("🧮 Modelagem"):
-            st.session_state.pagina = "modelagem"
+    selecao = st.radio(
+        label="",
+        options=["Página inicial", "Divulgações", "Análises", "Ranking", "Premissas"],
+        index=0,
+        key="menu_sidebar"
+    )
 
     st.markdown("---")
+    st.markdown(
+        "<div style='font-size: 0.85rem; color: #ccc;'>© 2025 - Longview Analytics</div>",
+        unsafe_allow_html=True
+    )
 
 
-# --- Controle de navegação ---
-if "pagina" not in st.session_state:
-    st.session_state.pagina = "menu"
+# PÁGINAS
+def pagina_inicial():
+    st.markdown("""
+    <style>
+    .intro-box {
+        background-color: #f9f9f9;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        font-family: 'Segoe UI', sans-serif;
+        color: #333;
+        line-height: 1.6;
+    }
+    .intro-box h1 {
+        font-size: 2.2rem;
+        color: #222;
+        margin-bottom: 1rem;
+    }
+    .intro-box p {
+        font-size: 1.1rem;
+        margin-bottom: 0.8rem;
+    }
+    </style>
+    <div class='intro-box'>
+        <h1>📊 Ferramenta de Análise de FIIs</h1>
+        <p>Esta plataforma combina inteligência macroeconômica e desempenho quantitativo para gerar insights de investimento em fundos imobiliários.</p>
+        <p>Utilize o menu à esquerda para:</p>
+        <p>🔍 Acompanhar <strong>divulgações e dividendos</strong> mais recentes dos FIIs.</p>
+        <p>📈 Explorar <strong>correlações com variáveis macro</strong> e sinais quantitativos de entrada ou saída.</p>
+        <p>⚙️ Ajustar <strong>premissas da análise</strong> (em breve).</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-if st.session_state.pagina == "menu":
-    menu_principal()
-elif st.session_state.pagina == "fiis":
+def pagina_premissas():
+    st.markdown("<h2>⚙️ Ranking</h2>", unsafe_allow_html=True)
+    st.info("Esta seção está em desenvolvimento.")
+
+# NAVEGAÇÃO PRINCIPAL
+if selecao == "Página inicial":
+    pagina_inicial()
+elif selecao == "Divulgações":
     pagina_FIIs()
-elif st.session_state.pagina == "graficos":
+elif selecao == "Análises":
     pagina_resultados()
+elif selecao == "Ranking":
+    pagina_premissas()
+elif selecao == "Premissas":
+    pagina_premissas()
