@@ -21,6 +21,9 @@ from pontos_macro import sinais_categoria
 resultados_teses_macro = [{"Fundo": fundo, "Sinal": sinal.strip().capitalize()} for fundo, sinal in sinais_categoria]
 
 def pagina_resultados():
+    if not st.session_state.get("arquivo", False):
+        st.warning("⚠ Por favor, carregue o arquivo na Página Inicial antes de continuar.")
+        st.stop()
     st.set_page_config("\U0001F4CA Sinais e Análises", layout="wide")
     st.title("\U0001F4CA Sinais e Análises por Fundo")
 

@@ -1,5 +1,9 @@
 def pagina_FIIs():
     import streamlit as st
+    if not st.session_state.get("arquivo", False):
+        st.warning("⚠ Por favor, carregue o arquivo na Página Inicial antes de continuar.")
+        st.stop()
+
     import pandas as pd
     import requests
     from datetime import date, timedelta
@@ -10,11 +14,6 @@ def pagina_FIIs():
     import json
     import base64
     from pathlib import Path
-
-    st.write("📁 Diretório de execução atual:", os.getcwd())
-    st.write("📂 Diretório onde está o script:", Path(__file__).parent)
-    st.write("📄 Caminho completo do arquivo:", Path(__file__).parent / "historico_dividendos_formatado_string_virgula.csv")
-    st.write("✅ Arquivo existe?", (Path(__file__).parent / "historico_dividendos_formatado_string_virgula.csv").exists())
 
     # --- Persistência de Favoritos ---
     CAMINHO_FAVORITOS = "favoritos.json"
