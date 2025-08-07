@@ -206,15 +206,15 @@ def pagina_FIIs():
             df_noticias = pd.DataFrame(todas_noticias)[["Fundo", "Data", "Título", "Cod", "Link"]]
             df_atuais = pd.DataFrame(dividendos_atuais)
 
-            # Histórico dividendos
-            st.write("Arquivo esperado:", historico_path)
-            st.write("Existe?", historico_path.exists())
-
             historico_path = Path(__file__).parent / "historico_dividendos_formatado_string_virgula.csv"
             colunas_hist = [
                 "Fundo", "Último Data-Base", "Último Pagamento", "Último Dividendo (R$)",
                 "Anterior Data-Base", "Anterior Pagamento", "Anterior Dividendo (R$)", "Status", "Link Relatório"
             ]
+
+            # Histórico dividendos
+            st.write("Arquivo esperado:", historico_path)
+            st.write("Existe?", historico_path.exists())
 
             if os.path.exists(historico_path):
                 df_anterior = pd.read_csv(historico_path)
