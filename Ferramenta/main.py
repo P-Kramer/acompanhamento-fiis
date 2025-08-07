@@ -5,6 +5,7 @@ import os
 
 from Noticias import pagina_FIIs
 from analises import pagina_resultados
+from ranking import pagina_ranking
 
 # Configuração geral da página
 st.set_page_config("Ferramenta de Análise de FIIs", layout="wide")
@@ -111,6 +112,6 @@ elif selecao == "Divulgações":
 elif selecao == "Análises":
     pagina_resultados()
 elif selecao == "Ranking":
-    pagina_premissas()
+    pagina_ranking()
 elif selecao == "Premissas":
     pagina_premissas()
