@@ -227,9 +227,12 @@ def pagina_FIIs():
 
             # Leitura segura
             if historico_path.exists():
+                st.success("✅ Entrou no IF: arquivo encontrado e será lido.")
                 df_anterior = pd.read_csv(historico_path)
             else:
+                st.error("❌ Arquivo não encontrado. Criando DataFrame vazio.")
                 df_anterior = pd.DataFrame(columns=colunas_hist)
+
 
             def atualizar_historico(df_novo, df_hist):
                 fundos_existentes = set(df_hist["Fundo"])
