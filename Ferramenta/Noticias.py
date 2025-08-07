@@ -206,7 +206,7 @@ def pagina_FIIs():
             df_atuais = pd.DataFrame(dividendos_atuais)
 
             # Histórico dividendos
-            historico_path = r"C:\Users\User\Documents\OneDrive\Documentos\Guilherme\Códigos\Longview_FIIs\acompanhamento-fiis\Ferramenta\FIIs\historico_dividendos_formatado_string_virgula.csv"
+            historico_path = os.path.abspath("historico_dividendos_formatado_string_virgula.csv")
             colunas_hist = [
                 "Fundo", "Último Data-Base", "Último Pagamento", "Último Dividendo (R$)",
                 "Anterior Data-Base", "Anterior Pagamento", "Anterior Dividendo (R$)", "Status", "Link Relatório"
