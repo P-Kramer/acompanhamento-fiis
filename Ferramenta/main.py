@@ -1,6 +1,7 @@
 import streamlit as st
 from pathlib import Path
 from PIL import Image
+import os
 
 from Noticias import pagina_FIIs
 from analises import pagina_resultados
@@ -9,7 +10,7 @@ from analises import pagina_resultados
 st.set_page_config("Ferramenta de Análise de FIIs", layout="wide")
 
 # Caminho da logo
-logo_path = Path(r"C:\Users\User\Documents\OneDrive\Documentos\Guilherme\Códigos\Longview_FIIs\acompanhamento-fiis\Ferramenta\logo_sidebar.png")
+logo_path = os.path.abspath("logo_sidebar.png")
 logo_img = Image.open(logo_path) if logo_path.exists() else None
 
 with st.sidebar:
