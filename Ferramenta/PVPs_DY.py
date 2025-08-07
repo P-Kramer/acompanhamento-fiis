@@ -1,10 +1,12 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import streamlit as st
 
-from lista_fundos_analisados import nomes_fundos_limpos
 from alfas import wb
 from alfas import precos
+
+nomes_fundos_limpos = st.session_state.get("nomes_fundos_limpos")
 
 # Dicionário para armazenar os valores
 valores_patrimoniais = {}

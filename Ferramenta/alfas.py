@@ -10,6 +10,7 @@ df_precos = st.session_state.get("df_precos")
 fundos_raw = st.session_state.get("fundos_raw")
 nomes_fundos_limpos = st.session_state.get("nomes_fundos_limpos")
 
+
 # Tratamento dos preços
 precos = df_precos.iloc[6:, 1:2+len(fundos_raw)].copy()
 precos.columns = ["Data"] + nomes_fundos_limpos

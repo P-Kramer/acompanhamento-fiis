@@ -23,7 +23,7 @@ def render_tabela_html(df, titulo, cor_header="#f2f2f2"):
 </tbody>
 </table>
 """
-    with st.expander(titulo, expanded=True):
+    with st.expander(titulo, expanded=False):  # já com a tabela recolhida por padrão
         st.markdown(html, unsafe_allow_html=True)
 
 def pagina_inicial():
@@ -79,9 +79,7 @@ def pagina_inicial():
 
             estrategias_fiis_reorganizado = {}
             for fundo, categoria in estrategias_fiis.items():
-                if categoria not in estrategias_fiis_reorganizado:
-                    estrategias_fiis_reorganizado[categoria] = []
-                estrategias_fiis_reorganizado[categoria].append(fundo)
+                estrategias_fiis_reorganizado.setdefault(categoria, []).append(fundo)
             for fundos in estrategias_fiis_reorganizado.values():
                 fundos.sort()
 
@@ -93,14 +91,16 @@ def pagina_inicial():
             st.session_state.estrategias_fiis = estrategias_fiis
             st.session_state.estrategias_fiis_reorganizado = estrategias_fiis_reorganizado
 
-            st.success("Arquivo carregado e estratégias extraídas com sucesso!")
+            st.success("✅ Arquivo carregado e estratégias extraídas com sucesso!")
 
-            with st.expander("🔍 Visualizar Estratégias por Categoria"):
+            with st.expander("🔍 Visualizar Estratégias por Categoria", expanded=False):
                 for categoria, fundos in estrategias_fiis_reorganizado.items():
                     st.markdown(f"**{categoria}**: {', '.join(fundos)}")
 
         except Exception as e:
-            st.error(f"Erro ao ler o arquivo: {e}")
+            st.error(f"❌ Erro ao ler o arquivo: {e}")
 
-    elif "estrategias_fiis" not in st.session_state:
+    elif "df_precos" in st.session_state:
+        st.success("✅ Arquivo já carregado anteriormente.")
+    else:
         st.warning("⚠️ Nenhum arquivo carregado ainda. Para acessar as demais páginas, envie o arquivo Precos_Reuters.xlsm na Página Inicial.")

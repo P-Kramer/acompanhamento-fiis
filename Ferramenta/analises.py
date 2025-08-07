@@ -5,6 +5,9 @@ from PIL import Image
 from glob import glob
 import matplotlib.pyplot as plt
 
+
+
+
 from top_fundos import df_ranking_final, df_score1, df_score2, df_score3, df_score4
 from pontos_macro import gerar_sinais_para_fundo, sintetizar_sinal_final
 from alfas import df_dy_diario

@@ -31,7 +31,7 @@ def render_tabela_html(df, titulo, cor_header="#f2f2f2"):
 </tbody>
 </table>
 """
-    with st.expander(titulo, expanded=True):
+    with st.expander(titulo, expanded=False):
         st.markdown(html, unsafe_allow_html=True)
 
 def pagina_ranking():

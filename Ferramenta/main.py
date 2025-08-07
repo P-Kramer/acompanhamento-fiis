@@ -3,11 +3,6 @@ from pathlib import Path
 from PIL import Image
 import os
 
-from Noticias import pagina_FIIs
-from analises import pagina_resultados
-from ranking import pagina_ranking
-from pagina_inicial import pagina_inicial
-
 # Configuração geral da página
 st.set_page_config("Ferramenta de Análise de FIIs", layout="wide")
 
@@ -75,10 +70,22 @@ def pagina_premissas():
     st.markdown("<h2>⚙️ Ranking</h2>", unsafe_allow_html=True)
     st.info("Esta seção está em desenvolvimento.")
 
+from pagina_inicial import pagina_inicial
 # NAVEGAÇÃO PRINCIPAL
 if selecao == "Página inicial":
     pagina_inicial()
-elif selecao == "Divulgações":
+
+    df_precos = st.session_state.get("df_precos")
+
+    while df_precos is None:
+        st.warning("⚠ Por favor, carregue o arquivo na Página Inicial antes de continuar.")
+        st.stop()
+
+from Noticias import pagina_FIIs
+from analises import pagina_resultados
+from ranking import pagina_ranking
+
+if selecao == "Divulgações":
     pagina_FIIs()
 elif selecao == "Análises":
     pagina_resultados()
