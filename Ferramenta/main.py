@@ -11,7 +11,8 @@ st.set_page_config("Ferramenta de Análise de FIIs", layout="wide")
 
 # Caminho da logo
 logo_path = os.path.abspath("logo_sidebar.png")
-logo_img = Image.open(logo_path) if logo_path.exists() else None
+logo_img = Image.open(logo_path) if os.path.exists(logo_path) else None
+
 
 with st.sidebar:
     st.markdown("""
