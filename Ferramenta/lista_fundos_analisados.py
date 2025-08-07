@@ -1,8 +1,9 @@
 import pandas as pd
+import os
 
 # Caminho do arquivo
 #arquivo = r"C:\Users\User\Documents\OneDrive\Documentos\Guilherme\Precos_Reuters.xlsm"
-arquivo = r"./Preços_Reuters.xlsm"
+arquivo = os.path.abspath("Precos_Reuters.xlsm")
 # Abre apenas a aba "Preços"
 df_precos = pd.read_excel(arquivo, sheet_name="Preços", header=None)
 
