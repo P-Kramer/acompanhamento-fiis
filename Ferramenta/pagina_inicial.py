@@ -57,13 +57,13 @@ def pagina_inicial():
         <p>Utilize o menu à esquerda para:</p>
         <p>🔍 Acompanhar <strong>divulgações e dividendos</strong> mais recentes dos FIIs.</p>
         <p>📈 Explorar <strong>correlações com variáveis macro</strong> e sinais quantitativos de entrada ou saída.</p>
-        <p>⚙️ Ajustar <strong>premissas da análise</strong> (em breve).</p>
+        <p>⚙️ Ajustar <strong>premissas da análise</strong>.</p>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("""
-    ### 📂 Upload do Arquivo de Estratégias
-    Envie o arquivo **Precos_Reuters.xlsm** com os tickers e suas categorias na aba **Preços** (linha 1: tickers, linha 2: categorias).
+    ### 📂 Upload do Excel de preços
+    Envie o arquivo **Precos_Reuters.xlsm** com os tickers.
     """)
 
     arquivo = st.file_uploader("Arraste ou selecione o arquivo .xlsm", type="xlsm")
@@ -71,6 +71,7 @@ def pagina_inicial():
     if arquivo:
         try:
             df_precos = pd.read_excel(arquivo, sheet_name="Preços", header=None)
+
             fundos_raw = df_precos.iloc[0, 2:].dropna().tolist()
             categorias_raw = df_precos.iloc[1, 2:2+len(fundos_raw)].tolist()
             nomes_fundos_limpos = [nome.replace(".SA", "") for nome in fundos_raw]
@@ -102,5 +103,3 @@ def pagina_inicial():
 
     elif "df_precos" in st.session_state:
         st.success("✅ Arquivo já carregado anteriormente.")
-    else:
-        st.warning("⚠️ Nenhum arquivo carregado ainda. Para acessar as demais páginas, envie o arquivo Precos_Reuters.xlsm na Página Inicial.")

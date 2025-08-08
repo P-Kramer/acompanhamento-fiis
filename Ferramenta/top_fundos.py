@@ -1,10 +1,39 @@
-import pandas as pd
 import streamlit as st
+import time
+
+import streamlit as st
+import pandas as pd
+
+st.write("🔍 DEBUG: Início de top_fundos")
+
+try:
+    alfas = st.session_state.get("alfas")
+    st.write("🔍 DEBUG: alfas (raw):", type(alfas))
+
+    if alfas is None:
+        st.warning("⚠️ alfas ainda está None.")
+        st.stop()
+
+    st.write("🔍 DEBUG: alfas head:")
+    st.dataframe(alfas.head(5))
+
+    alfas["Data"] = pd.to_datetime(alfas["Data"])
+    st.success("✅ Conversão de Data aplicada com sucesso")
+
+except Exception as e:
+    st.error(f"❌ Erro durante debug de alfas: {e}")
 
 
-from alfas import alfas
+alfas = st.session_state.get("alfas")
+df_dy_diario = st.session_state.get("df_dy_diario")
+df_dy_mensal = st.session_state.get("df_dy_mensal")
 
-# Leitura e preparação dos dados
+# Inicializa como None por padrão
+df_score1 = df_score2 = df_score3 = df_score4 = df_ranking_final = df_ranking_retroativo = None
+
+import pandas as pd
+
+# Agora sim, você pode trabalhar com alfas
 alfas["Data"] = pd.to_datetime(alfas["Data"])
 alfas = alfas.sort_values("Data", ascending=True).reset_index(drop=True)
 janela = 21  # dias úteis para cálculo da consistência
@@ -187,5 +216,4 @@ else:
 # Criação dos rankings numéricos
 ranking_atual = {f: i + 1 for i, f in enumerate(df_ranking_final["Fundo"])}
 ranking_antigo = {f: i + 1 for i, f in enumerate(df_ranking_retroativo["Fundo"])}
-
 

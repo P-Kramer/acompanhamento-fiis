@@ -1,50 +1,20 @@
 import streamlit as st
 from pathlib import Path
 from PIL import Image
-import os
 
-# Configuração geral da página
 st.set_page_config("Ferramenta de Análise de FIIs", layout="wide")
 
+# Logo da sidebar
 logo_path = Path(__file__).parent / "logo_sidebar.png"
 logo_img = Image.open(logo_path) if logo_path.exists() else None
 
-
+# === Sidebar ===
 with st.sidebar:
-    st.markdown("""
-    <style>
-    [data-testid="stSidebar"] {
-        background-color: #3a3a3a;
-        border-right: 1px solid #ddd;
-    }
+    st.markdown("""<style> ... </style>""", unsafe_allow_html=True)
 
-    [data-testid="stSidebar"] * {
-        color: #ffffff !important;
-    }
-
-    div[data-testid="stSidebar"] label:hover {
-        background-color: #4a4a4a;
-        color: #ffffff !important;
-    }
-
-    div[data-testid="stSidebar"] input:checked + div > label {
-        background-color: #444;
-        font-weight: 600;
-        border-left: 4px solid #5e9bff;
-        color: #ffffff !important;
-    }
-
-    .logo-container {
-        text-align: center;
-        margin-bottom: 1.5rem;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # ✅ Exibir logo centralizada e maior
     if logo_img:
         st.markdown("<div class='logo-container'>", unsafe_allow_html=True)
-        st.image(logo_img, width=140)  # Aumente o width aqui conforme desejar
+        st.image(logo_img, width=140)
         st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.warning("Logo não encontrada.")
@@ -57,33 +27,28 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.markdown(
-        "<div style='font-size: 0.85rem; color: #ccc;'>© 2025 - Longview Analytics</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown("<div style='font-size: 0.85rem; color: #ccc;'>© 2025 - Longview Analytics</div>", unsafe_allow_html=True)
 
-def pagina_premissas():
-    if not st.session_state.get("arquivo", False):
-        st.warning("⚠ Por favor, carregue o arquivo na Página Inicial antes de continuar.")
-        st.stop()
-
-    st.markdown("<h2>⚙️ Ranking</h2>", unsafe_allow_html=True)
-    st.info("Esta seção está em desenvolvimento.")
-
+# === PÁGINA INICIAL ===
 from pagina_inicial import pagina_inicial
-# NAVEGAÇÃO PRINCIPAL
+
 if selecao == "Página inicial":
     pagina_inicial()
 
-    df_precos = st.session_state.get("df_precos")
+# === BLOQUEIO GLOBAL ===
+if "arquivo" not in st.session_state:
+    st.warning("⚠️ Nenhum arquivo carregado ainda. Para acessar as demais páginas, envie o arquivo Precos_Reuters.xlsm na Página Inicial.")
+    st.stop()
 
-    while df_precos is None:
-        st.warning("⚠ Por favor, carregue o arquivo na Página Inicial antes de continuar.")
-        st.stop()
-
+# === IMPORTS POSTERIORES APENAS COM ARQUIVO DISPONÍVEL ===
 from Noticias import pagina_FIIs
 from analises import pagina_resultados
 from ranking import pagina_ranking
+
+# === OUTRAS PÁGINAS ===
+def pagina_premissas():
+    st.markdown("<h2>⚙️ Ranking</h2>", unsafe_allow_html=True)
+    st.info("Esta seção está em desenvolvimento.")
 
 if selecao == "Divulgações":
     pagina_FIIs()
