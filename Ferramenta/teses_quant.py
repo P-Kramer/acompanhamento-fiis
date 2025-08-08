@@ -1,12 +1,18 @@
 import pandas as pd
 from PVPs_DY import dados_fiis
-from top_fundos import df_ranking_final
-from alfas import alfas
-
 import streamlit as st
 
+alfas = st.session_state.get("alfas")
+df_ranking_final = st.session_state.get("df_ranking_final")
+
+# ✅ Agora fora de qualquer loop
+resultados_teses_quant = []
+
+# ✅ Único for necessário
 for _, row in df_ranking_final.iterrows():
-    # Função para gerar o sinal
+    fundo = row["Fundo"]
+    score_final = float(row["Score_Final"])
+
     def gerar_sinal(score_final, media_5d, media_21d, pvp):
         if score_final is None or media_5d is None or media_21d is None or pvp is None:
             return "Neutro"
@@ -20,30 +26,24 @@ for _, row in df_ranking_final.iterrows():
         else:
             return "Neutro"
 
-    # Construir a tabela final com DY incluso
-    resultados = []
+    if fundo in alfas.columns and fundo in dados_fiis:
+        media_5d = alfas[fundo].tail(5).mean()
+        media_21d = alfas[fundo].tail(21).mean()
+        pvp = float(dados_fiis[fundo]["PVP"])
+        dy = float(dados_fiis[fundo]["Dividend_Yield"][:-1])
+        sinal = gerar_sinal(score_final, media_5d, media_21d, pvp)
 
-    for _, row in df_ranking_final.iterrows():
-        fundo = row["Fundo"]
-        score_final = float(row["Score_Final"])
+        resultados_teses_quant.append({
+            "Fundo": fundo,
+            "Score_Final": round(score_final, 2),
+            "Media_5d": round(media_5d * 100, 3),
+            "Media_21d": round(media_21d * 100, 2),
+            "P/VP": pvp,
+            "Dividend_Yield": round(dy, 2),
+            "Sinal": sinal
+        })
 
-        if fundo in alfas.columns and fundo in dados_fiis:
-            media_5d = alfas[fundo].tail(5).mean()
-            media_21d = alfas[fundo].tail(21).mean()
-            pvp = float(dados_fiis[fundo]["PVP"])
-            dy = float(dados_fiis[fundo]["Dividend_Yield"][:-1])
-            sinal = gerar_sinal(score_final, media_5d, media_21d, pvp)
+df_resultado = pd.DataFrame(resultados_teses_quant)
 
-            resultados.append({
-                "Fundo": fundo,
-                "Score_Final": round(score_final,2),
-                "Media_5d": f'{round(media_5d*100,3)}%',
-                "Media_21d": f'{round(media_21d*100,2)}%',
-                "P/VP": pvp,
-                "Dividend_Yield": f'{round(dy, 2)}%',
-                "Sinal": sinal
-            })
-
-    df_resultado = pd.DataFrame(resultados)
-
-
+st.session_state["resultados_teses_quant"] = resultados_teses_quant
+st.session_state["df_resultado"] = df_resultado

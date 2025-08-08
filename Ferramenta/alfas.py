@@ -1,3 +1,4 @@
+# alfas.py
 import pandas as pd
 from datetime import datetime, timedelta
 import urllib.request
@@ -5,16 +6,15 @@ import json
 from openpyxl import load_workbook
 import streamlit as st
 
-st.session_state["alfas_carregado"] = False
+def calcular_alfas():
+    if "df_precos" not in st.session_state or "fundos_raw" not in st.session_state:
+        st.warning("⚠️ Arquivo de preços ainda não foi carregado.")
+        return
 
-if "df_precos" in st.session_state and "fundos_raw" in st.session_state:
     df_precos = st.session_state.df_precos
     fundos_raw = st.session_state.fundos_raw
-
-    arquivo = st.session_state.get("arquivo")
-    df_precos = st.session_state.get("df_precos")
-    fundos_raw = st.session_state.get("fundos_raw")
     nomes_fundos_limpos = st.session_state.get("nomes_fundos_limpos")
+    arquivo = st.session_state.arquivo
 
 
     # Tratamento dos preços
@@ -25,11 +25,6 @@ if "df_precos" in st.session_state and "fundos_raw" in st.session_state:
     precos = precos.sort_values("Data").reset_index(drop=True)
     ontem = datetime.now().date() - timedelta(days=1)
     precos = precos[precos["Data"].dt.date <= ontem].reset_index(drop=True)
-
-    ###############################
-    st.write("📊 DEBUG: precos - shape:", precos.shape)
-    st.dataframe(precos.head(5))
-
 
     # CDI - Dados do Banco Central
     data_inicio = '02/01/2017'
@@ -46,17 +41,9 @@ if "df_precos" in st.session_state and "fundos_raw" in st.session_state:
         df_cdi['Fator diário do CDI'] = 1 + (df_cdi['Fator diário do CDI'] / 100)
         df_cdi["Taxa anual"] = df_cdi["Fator diário do CDI"]**252 - 1
 
-        ####################################
-        st.write("📊 DEBUG: df_cdi - shape:", df_cdi.shape)
-        st.dataframe(df_cdi.tail(5))
-
 
     # Merge preços e CDI
     df_merged = pd.merge(precos, df_cdi, on="Data", how="inner")
-
-    ####################################
-    st.write("📊 DEBUG: df_merged - shape:", df_merged.shape)
-    st.dataframe(df_merged[[df_merged.columns[0], *df_merged.columns[1:4]]].head(5))  # primeiras colunas
 
 
     df_cdi_mensal = df_cdi.copy()
@@ -146,12 +133,5 @@ if "df_precos" in st.session_state and "fundos_raw" in st.session_state:
     df_dy_mensal = df_dy_mensal.sort_index().round(4)
     st.session_state.df_dy_mensal = df_dy_mensal
     st.session_state.df_dy_diario = df_dy_diario
-
-else:
-    # Inicializa as variáveis como None para evitar quebras em importações
-    st.warning("⚠ Por favor, carregue o arquivo na Página Inicial.")
-    df_score1 = df_score2 = df_score3 = df_score4 = None
-    df_ranking_final = df_ranking_retroativo = None
-
-st.session_state.alfas = alfas
-st.session_state["alfas_carregado"] = True
+    st.session_state.serie_cdi = serie_cdi
+    st.session_state.df_merged = df_merged

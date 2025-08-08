@@ -1,200 +1,143 @@
-import streamlit as st
-import time
-
+# scores.py
 import streamlit as st
 import pandas as pd
 
-st.write("🔍 DEBUG: Início de top_fundos")
-
-try:
+def calcular_scores():
+    # precisa dos alfas
     alfas = st.session_state.get("alfas")
-    st.write("🔍 DEBUG: alfas (raw):", type(alfas))
+    if alfas is None or alfas.empty:
+        st.error("❌ Alfas não carregado. Vá à Página inicial e gere os alfas.")
+        return
 
-    if alfas is None:
-        st.warning("⚠️ alfas ainda está None.")
-        st.stop()
-
-    st.write("🔍 DEBUG: alfas head:")
-    st.dataframe(alfas.head(5))
-
+    # --- Cálculos (use seu código daqui para baixo) ---
+    alfas = alfas.copy()
     alfas["Data"] = pd.to_datetime(alfas["Data"])
-    st.success("✅ Conversão de Data aplicada com sucesso")
+    alfas = alfas.sort_values("Data").reset_index(drop=True)
 
-except Exception as e:
-    st.error(f"❌ Erro durante debug de alfas: {e}")
+    # opcional: checagem de mínimo de linhas (para janelas 126, 63 etc.)
+    if len(alfas) < 140:
+        st.warning("⚠️ Poucos dados para calcular todos os scores (precisa de ~140 dias).")
+    # ... (cole aqui exatamente seus cálculos de df_score1..4, df_ranking_final, df_ranking_retroativo)
+    # no final, salve no session_state:
 
+    janela = 21  # dias úteis para cálculo da consistência
 
-alfas = st.session_state.get("alfas")
-df_dy_diario = st.session_state.get("df_dy_diario")
-df_dy_mensal = st.session_state.get("df_dy_mensal")
+    # Remove a coluna "Data" para cálculos
+    df_alfa = alfas.drop(columns=["Data"])
 
-# Inicializa como None por padrão
-df_score1 = df_score2 = df_score3 = df_score4 = df_ranking_final = df_ranking_retroativo = None
+    # Aplica o cálculo de score de consistência (número de dias com alfa > 0 nos últimos 21 dias)
+    df_score_raw = df_alfa.rolling(window=janela).apply(lambda x: (x > 0).sum(), raw=True)
 
-import pandas as pd
+    # Normaliza para nota de 0 a 10
+    df_score1 = (df_score_raw / janela * 10).clip(0, 10).round(2)
 
-# Agora sim, você pode trabalhar com alfas
-alfas["Data"] = pd.to_datetime(alfas["Data"])
-alfas = alfas.sort_values("Data", ascending=True).reset_index(drop=True)
-janela = 21  # dias úteis para cálculo da consistência
+    # Reinsere a coluna de datas correspondente
+    df_score1["Data"] = alfas["Data"]
 
-# Remove a coluna "Data" para cálculos
-df_alfa = alfas.drop(columns=["Data"])
+    # Define o limite como 1º de janeiro de 2017
+    data_limite = pd.Timestamp("2017-01-02")
+    ontem = df_score1["Data"].max()
+    df_score1 = df_score1[df_score1["Data"] >= data_limite].reset_index(drop=True)
 
-# Aplica o cálculo de score de consistência (número de dias com alfa > 0 nos últimos 21 dias)
-df_score_raw = df_alfa.rolling(window=janela).apply(lambda x: (x > 0).sum(), raw=True)
+    # Define o limite de variação (0.3% ao dia como nota 10)
+    limite_2 = 0.003
 
-# Normaliza para nota de 0 a 10
-df_score1 = (df_score_raw / janela * 10).clip(0, 10).round(2)
+    # Garante que a coluna de data esteja ordenada
+    alfas["Data"] = pd.to_datetime(alfas["Data"])
+    alfas = alfas.sort_values("Data").reset_index(drop=True)
 
-# Reinsere a coluna de datas correspondente
-df_score1["Data"] = alfas["Data"]
+    # Separa o alfa dos fundos
+    df_alfa = alfas.drop(columns=["Data"])
 
-# Define o limite como 1º de janeiro de 2017
-data_limite = pd.Timestamp("2017-01-02")
-ontem = df_score1["Data"].max()
-df_score1 = df_score1[df_score1["Data"] >= data_limite].reset_index(drop=True)
+    # Calcula as médias móveis
+    nota_5d  = df_alfa.rolling(window=5).mean().apply(lambda x: ((x + limite_2) / (2 * limite_2)) * 10)
+    nota_21d = df_alfa.rolling(window=21).mean().apply(lambda x: ((x + limite_2) / (2 * limite_2)) * 10)
+    nota_63d = df_alfa.rolling(window=63).mean().apply(lambda x: ((x + limite_2) / (2 * limite_2)) * 10)
 
-import pandas as pd
+    # Pondera os scores conforme pesos definidos
+    df_score2 = (
+        0.5 * nota_5d +
+        0.3 * nota_21d +
+        0.2 * nota_63d
+    ).clip(lower=0, upper=10).round(2)
 
-# Define o limite de variação (0.3% ao dia como nota 10)
-limite_2 = 0.003
+    # Adiciona a coluna de datas
+    df_score2["Data"] = alfas["Data"]
 
-# Garante que a coluna de data esteja ordenada
-alfas["Data"] = pd.to_datetime(alfas["Data"])
-alfas = alfas.sort_values("Data").reset_index(drop=True)
+    data_limite = pd.Timestamp("2017-01-02")
+    df_score2 = df_score2[df_score2["Data"] >= data_limite].reset_index(drop=True)
 
-# Separa o alfa dos fundos
-df_alfa = alfas.drop(columns=["Data"])
+    # Define os parâmetros
+    limite_3 = 0.1  # 10% acumulado
+    dias_3 = 63     # Janela de 63 dias úteis
 
-# Calcula as médias móveis
-nota_5d  = df_alfa.rolling(window=5).mean().apply(lambda x: ((x + limite_2) / (2 * limite_2)) * 10)
-nota_21d = df_alfa.rolling(window=21).mean().apply(lambda x: ((x + limite_2) / (2 * limite_2)) * 10)
-nota_63d = df_alfa.rolling(window=63).mean().apply(lambda x: ((x + limite_2) / (2 * limite_2)) * 10)
+    # Garante que a coluna de data esteja ordenada
+    alfas["Data"] = pd.to_datetime(alfas["Data"])
+    alfas = alfas.sort_values("Data").reset_index(drop=True)
 
-# Pondera os scores conforme pesos definidos
-df_score2 = (
-    0.5 * nota_5d +
-    0.3 * nota_21d +
-    0.2 * nota_63d
-).clip(lower=0, upper=10).round(2)
+    # Separa os alfas
+    df_alfa = alfas.drop(columns=["Data"])
 
-# Adiciona a coluna de datas
-df_score2["Data"] = alfas["Data"]
+    # Calcula o alfa acumulado por janela de 63 dias
+    acumulado = df_alfa.rolling(window=dias_3).sum()
 
-data_limite = pd.Timestamp("2017-01-02")
-df_score2 = df_score2[df_score2["Data"] >= data_limite].reset_index(drop=True)
+    # Converte para nota de 0 a 10 com base no limite
+    df_score3 = ((acumulado + limite_3) / (2 * limite_3)) * 10
+    df_score3 = df_score3.clip(lower=0, upper=10).round(2)
 
-import pandas as pd
+    # Adiciona a coluna de datas
+    df_score3["Data"] = alfas["Data"]
 
-# Define os parâmetros
-limite_3 = 0.1  # 10% acumulado
-dias_3 = 63     # Janela de 63 dias úteis
+    data_limite = pd.Timestamp("2017-01-02")
+    df_score3 = df_score3[df_score3["Data"] >= data_limite].reset_index(drop=True)
 
-# Garante que a coluna de data esteja ordenada
-alfas["Data"] = pd.to_datetime(alfas["Data"])
-alfas = alfas.sort_values("Data").reset_index(drop=True)
+    # Define parâmetros
+    limite_4 = 0.025  # desvio padrão máximo tolerado (2.5%)
+    dias_4 = 126      # janela de cálculo da volatilidade
 
-# Separa os alfas
-df_alfa = alfas.drop(columns=["Data"])
+    # Garante que a data esteja em ordem
+    alfas["Data"] = pd.to_datetime(alfas["Data"])
+    alfas = alfas.sort_values("Data").reset_index(drop=True)
 
-# Calcula o alfa acumulado por janela de 63 dias
-acumulado = df_alfa.rolling(window=dias_3).sum()
+    # Remove coluna de data e separa os alfas
+    df_alfa = alfas.drop(columns=["Data"])
 
-# Converte para nota de 0 a 10 com base no limite
-df_score3 = ((acumulado + limite_3) / (2 * limite_3)) * 10
-df_score3 = df_score3.clip(lower=0, upper=10).round(2)
+    # Calcula o desvio padrão em janela móvel
+    desvios_movel = df_alfa.rolling(window=dias_4).std()
 
-# Adiciona a coluna de datas
-df_score3["Data"] = alfas["Data"]
+    # Converte para nota de 0 a 10 (menor volatilidade => nota maior)
+    df_score4 = (1 - desvios_movel.clip(upper=limite_4) / limite_4) * 10
+    df_score4 = df_score4.clip(lower=0, upper=10).round(2)
 
-data_limite = pd.Timestamp("2017-01-02")
-df_score3 = df_score3[df_score3["Data"] >= data_limite].reset_index(drop=True)
+    # Adiciona a coluna "Data"
+    df_score4["Data"] = alfas["Data"]
 
-import pandas as pd
+    data_limite = pd.Timestamp("2017-01-02")
+    df_score4 = df_score4[df_score4["Data"] >= data_limite].reset_index(drop=True)
 
-# Define parâmetros
-limite_4 = 0.025  # desvio padrão máximo tolerado (2.5%)
-dias_4 = 126      # janela de cálculo da volatilidade
+    # Define pesos utilizados
+    peso_1 = 0.30  # Consistência
+    peso_2 = 0.25  # Força
+    peso_3 = 0.25  # Acumulado
+    peso_4 = 0.20  # Volatilidade
 
-# Garante que a data esteja em ordem
-alfas["Data"] = pd.to_datetime(alfas["Data"])
-alfas = alfas.sort_values("Data").reset_index(drop=True)
+    dias = 5
 
-# Remove coluna de data e separa os alfas
-df_alfa = alfas.drop(columns=["Data"])
+    # Seleciona os últimos dias úteis (com base em df_score1)
+    ultimos_dias = df_score1["Data"].tail(dias).tolist()
 
-# Calcula o desvio padrão em janela móvel
-desvios_movel = df_alfa.rolling(window=dias_4).std()
+    # Inicializa o DataFrame com a coluna Data
+    df_score_final = pd.DataFrame({"Data": ultimos_dias})
 
-# Converte para nota de 0 a 10 (menor volatilidade => nota maior)
-df_score4 = (1 - desvios_movel.clip(upper=limite_4) / limite_4) * 10
-df_score4 = df_score4.clip(lower=0, upper=10).round(2)
-
-# Adiciona a coluna "Data"
-df_score4["Data"] = alfas["Data"]
-
-data_limite = pd.Timestamp("2017-01-02")
-df_score4 = df_score4[df_score4["Data"] >= data_limite].reset_index(drop=True)
-
-# Define pesos utilizados
-peso_1 = 0.30  # Consistência
-peso_2 = 0.25  # Força
-peso_3 = 0.25  # Acumulado
-peso_4 = 0.20  # Volatilidade
-
-dias = 5
-
-# Seleciona os últimos dias úteis (com base em df_score1)
-ultimos_dias = df_score1["Data"].tail(dias).tolist()
-
-# Inicializa o DataFrame com a coluna Data
-df_score_final = pd.DataFrame({"Data": ultimos_dias})
-
-# Para cada fundo, calcula a média final ponderada dos últimos 5 dias
-for fundo in df_score1.columns:
-    if fundo == "Data":
-        continue
-
-    media_1 = df_score1[df_score1["Data"].isin(ultimos_dias)][fundo].mean()
-    media_2 = df_score2[df_score2["Data"].isin(ultimos_dias)][fundo].mean()
-    media_3 = df_score3[df_score3["Data"].isin(ultimos_dias)][fundo].mean()
-    media_4 = df_score4[df_score4["Data"].isin(ultimos_dias)][fundo].mean()
-
-    score_final = (
-        peso_1 * media_1 +
-        peso_2 * media_2 +
-        peso_3 * media_3 +
-        peso_4 * media_4
-    )
-
-    df_score_final[fundo] = [round(score_final, 2)] * dias  # mesmo valor para os dias selecionados (ou ajuste para apenas uma linha)
-
-# Transforma em ranking final
-df_ranking_final = df_score_final.drop(columns=["Data"]).mean().sort_values(ascending=False)
-df_ranking_final = pd.DataFrame(df_ranking_final, columns=[f"Score_Final"])
-df_ranking_final.reset_index(inplace=True)
-df_ranking_final.columns = ["Fundo", f"Score_Final"]
-
-# Define janela de 5 dias úteis, mas deslocada para 21 dias atrás
-dias_atras = 21
-
-# Verifica se há dados suficientes
-if len(df_score1) >= dias_atras + dias:
-    data_base = df_score1.iloc[-(dias_atras + dias)]["Data"]
-    datas_retroativas = df_score1[df_score1["Data"] >= data_base].head(dias)["Data"].tolist()
-
-    # Inicializa novo DataFrame
-    df_score_retroativo = pd.DataFrame({"Data": datas_retroativas})
-
+    # Para cada fundo, calcula a média final ponderada dos últimos 5 dias
     for fundo in df_score1.columns:
         if fundo == "Data":
             continue
 
-        media_1 = df_score1[df_score1["Data"].isin(datas_retroativas)][fundo].mean()
-        media_2 = df_score2[df_score2["Data"].isin(datas_retroativas)][fundo].mean()
-        media_3 = df_score3[df_score3["Data"].isin(datas_retroativas)][fundo].mean()
-        media_4 = df_score4[df_score4["Data"].isin(datas_retroativas)][fundo].mean()
+        media_1 = df_score1[df_score1["Data"].isin(ultimos_dias)][fundo].mean()
+        media_2 = df_score2[df_score2["Data"].isin(ultimos_dias)][fundo].mean()
+        media_3 = df_score3[df_score3["Data"].isin(ultimos_dias)][fundo].mean()
+        media_4 = df_score4[df_score4["Data"].isin(ultimos_dias)][fundo].mean()
 
         score_final = (
             peso_1 * media_1 +
@@ -203,17 +146,64 @@ if len(df_score1) >= dias_atras + dias:
             peso_4 * media_4
         )
 
-        df_score_retroativo[fundo] = [round(score_final, 2)] * dias
+        df_score_final[fundo] = [round(score_final, 2)] * dias  # mesmo valor para os dias selecionados (ou ajuste para apenas uma linha)
 
-    # Cria ranking retroativo
-    df_ranking_retroativo = df_score_retroativo.drop(columns=["Data"]).mean().sort_values(ascending=False)
-    df_ranking_retroativo = pd.DataFrame(df_ranking_retroativo, columns=[f"Score_21d_atras"])
-    df_ranking_retroativo.reset_index(inplace=True)
-    df_ranking_retroativo.columns = ["Fundo", f"Score_21d_atras"]
-else:
-    print("Não há dados suficientes para calcular o ranking 21 dias atrás.")
+    # Transforma em ranking final
+    df_ranking_final = df_score_final.drop(columns=["Data"]).mean().sort_values(ascending=False)
+    df_ranking_final = pd.DataFrame(df_ranking_final, columns=[f"Score_Final"])
+    df_ranking_final.reset_index(inplace=True)
+    df_ranking_final.columns = ["Fundo", f"Score_Final"]
 
-# Criação dos rankings numéricos
-ranking_atual = {f: i + 1 for i, f in enumerate(df_ranking_final["Fundo"])}
-ranking_antigo = {f: i + 1 for i, f in enumerate(df_ranking_retroativo["Fundo"])}
+    # Define janela de 5 dias úteis, mas deslocada para 21 dias atrás
+    dias_atras = 21
 
+    # Verifica se há dados suficientes
+    if len(df_score1) >= dias_atras + dias:
+        data_base = df_score1.iloc[-(dias_atras + dias)]["Data"]
+        datas_retroativas = df_score1[df_score1["Data"] >= data_base].head(dias)["Data"].tolist()
+
+        # Inicializa novo DataFrame
+        df_score_retroativo = pd.DataFrame({"Data": datas_retroativas})
+
+        for fundo in df_score1.columns:
+            if fundo == "Data":
+                continue
+
+            media_1 = df_score1[df_score1["Data"].isin(datas_retroativas)][fundo].mean()
+            media_2 = df_score2[df_score2["Data"].isin(datas_retroativas)][fundo].mean()
+            media_3 = df_score3[df_score3["Data"].isin(datas_retroativas)][fundo].mean()
+            media_4 = df_score4[df_score4["Data"].isin(datas_retroativas)][fundo].mean()
+
+            score_final = (
+                peso_1 * media_1 +
+                peso_2 * media_2 +
+                peso_3 * media_3 +
+                peso_4 * media_4
+            )
+
+            df_score_retroativo[fundo] = [round(score_final, 2)] * dias
+
+        # Cria ranking retroativo
+        df_ranking_retroativo = df_score_retroativo.drop(columns=["Data"]).mean().sort_values(ascending=False)
+        df_ranking_retroativo = pd.DataFrame(df_ranking_retroativo, columns=[f"Score_21d_atras"])
+        df_ranking_retroativo.reset_index(inplace=True)
+        df_ranking_retroativo.columns = ["Fundo", f"Score_21d_atras"]
+    else:
+        print("Não há dados suficientes para calcular o ranking 21 dias atrás.")
+
+    # Criação dos rankings numéricos
+    ranking_atual = {f: i + 1 for i, f in enumerate(df_ranking_final["Fundo"])}
+    ranking_antigo = {f: i + 1 for i, f in enumerate(df_ranking_retroativo["Fundo"])}
+
+
+    st.session_state["df_score1"] = df_score1
+    st.session_state["df_score2"] = df_score2
+    st.session_state["df_score3"] = df_score3
+    st.session_state["df_score4"] = df_score4
+    st.session_state["df_ranking_final"] = df_ranking_final
+    st.session_state["df_ranking_retroativo"] = df_ranking_retroativo
+    st.session_state["ranking_atual"] = {f: i+1 for i, f in enumerate(df_ranking_final["Fundo"])}
+    st.session_state["ranking_antigo"] = {f: i+1 for i, f in enumerate(df_ranking_retroativo["Fundo"])}
+    st.session_state["scores_ready"] = True
+    st.session_state["ranking_atual"] = ranking_atual
+    st.session_state["ranking_antigo"] = ranking_antigo

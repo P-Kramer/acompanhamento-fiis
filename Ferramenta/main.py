@@ -40,6 +40,13 @@ if "arquivo" not in st.session_state:
     st.warning("⚠️ Nenhum arquivo carregado ainda. Para acessar as demais páginas, envie o arquivo Precos_Reuters.xlsm na Página Inicial.")
     st.stop()
 
+# Garante que as variáveis macro estejam carregadas
+from dados import carregar_variaveis_macro
+
+if "df_merged" not in st.session_state or "correlacoes_por_variavel" not in st.session_state:
+    carregar_variaveis_macro(st.session_state["arquivo"])
+
+
 # === IMPORTS POSTERIORES APENAS COM ARQUIVO DISPONÍVEL ===
 from Noticias import pagina_FIIs
 from analises import pagina_resultados

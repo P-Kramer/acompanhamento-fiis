@@ -4,26 +4,55 @@ import os
 from PIL import Image
 from glob import glob
 import matplotlib.pyplot as plt
-
-
-
-
-from top_fundos import df_ranking_final, df_score1, df_score2, df_score3, df_score4
-from pontos_macro import gerar_sinais_para_fundo, sintetizar_sinal_final
-from alfas import df_dy_diario
-from dados import df_merged, correlacoes_por_variavel
-from corr import resultados
-from teses_quant import resultados as resultados_teses_quant
-from alfas import df_dy_mensal, serie_cdi
 from dateutil.relativedelta import relativedelta
-from top_fundos import ranking_antigo, ranking_atual
-from teses_quant import df_resultado
-from pontos_macro import sinais_categoria
+from pontos_macro import gerar_sinais_para_fundo, sintetizar_sinal_final
+
+
+resultados = st.session_state.get("resultados")
+correlacoes_por_variavel = st.session_state.get("correlacoes_por_variavel")
+df_merged = st.session_state.get("df_merged")
+df_dy_diario = st.session_state.get("df_dy_diario")
+df_dy_mensal = st.session_state.get("df_dy_mensal")
+serie_cdi = st.session_state.get("serie_cdi")
+resultados_teses_quant = st.session_state.get("resultados_teses_quant")
+ranking_antigo = st.session_state.get("ranking_antigo")
+ranking_atual = st.session_state.get("ranking_atual")
+sinais_categoria = st.session_state.get("sinais_categoria")
+df_resultado = st.session_state.get("df_resultado")
+df_ranking_final = st.session_state.get("df_ranking_final")
+df_score1 = st.session_state.get("df_score1")
+df_score2 = st.session_state.get("df_score2")
+df_score3 = st.session_state.get("df_score3")
+df_score4 = st.session_state.get("df_score4")
+
+required_keys = ["df_score1", "df_score2", "df_score3", "df_score4", "df_ranking_final"]
+
+if not all(k in st.session_state and st.session_state[k] is not None for k in required_keys):
+    st.error("❌ Erro: Os dados de score ainda não foram carregados corretamente. Certifique-se de ter rodado o cálculo de alfas.")
+    st.stop()
+
+
+df_resultado = st.session_state.get("df_resultado")
+if df_resultado is None:
+    st.error("❌ Erro: O DataFrame `df_resultado` ainda não foi carregado. Verifique se o cálculo dos resultados quantitativos foi feito.")
+    st.stop()
+
+
+if df_ranking_final is None:
+    st.warning("⚠ Dados de DY mensal ou CDI ainda não foram carregados.")
+    st.stop()
+
 
 estrategias_fiis_reorganizado = st.session_state.get("estrategias_fiis_reorganizado")
 resultados_teses_macro = [{"Fundo": fundo, "Sinal": sinal.strip().capitalize()} for fundo, sinal in sinais_categoria]
 
 def pagina_resultados():
+    df_dy_mensal = st.session_state.get("df_dy_mensal")
+    resultados = st.session_state.get("resultados")
+    
+    resultados_teses_quant = st.session_state.get("resultados_teses_quant") or []
+    st.write("📦 DEBUG", st.session_state.get("correlacoes_por_variavel"))
+
     if not st.session_state.get("arquivo", False):
         st.warning("⚠ Por favor, carregue o arquivo na Página Inicial antes de continuar.")
         st.stop()
@@ -203,6 +232,7 @@ def pagina_resultados():
                 variavel = row["Variável"]
                 corr = row["Correlação"]
                 lag = row["Defasagem"]
+
                 # Detecta categoria do fundo se "Todas" foi selecionado
                 if categoria == "Todas":
                     categoria_fundo = next(
@@ -217,7 +247,6 @@ def pagina_resultados():
                     tipo_corr = correlacoes_por_variavel.get(variavel.strip(), {}).get(categoria_fundo.strip(), "N/A")
                 else:
                     tipo_corr = "N/A"
-
 
                 # Variação Macro
                 try:
@@ -250,68 +279,39 @@ def pagina_resultados():
                     simbolo_macro = "?"
                     cor_macro = "black"
 
-                # Dividend Yield
-                """try:
-                    serie_dy = df_dy_diario[["Data", fundo]].dropna()
-                    serie_dy["Data"] = pd.to_datetime(serie_dy["Data"])
-                    serie_dy.set_index("Data", inplace=True)
-                    serie_dy = serie_dy[fundo].sort_index()
-
-                    janela = 21
-                    limite_dy = (serie_dy - serie_dy.mean()).abs().mean()
-                    valor_dy_atual = df_dy_mensal[fundo][-1]
-                    valor_dy_anterior = df_dy_mensal[fundo][-2]
-                    #valor_dy_atual = serie_dy.iloc[-1]
-                    #valor_dy_anterior = serie_dy.iloc[-21]
-                    variacao_dy = valor_dy_atual - valor_dy_anterior
-
-                    if variacao_dy > limite_dy:
-                        simbolo_dy = "▲"
-                        cor_dy = "green"
-                    elif variacao_dy < -limite_dy:
-                        simbolo_dy = "▼"
-                        cor_dy = "red"
-                    else:
-                        simbolo_dy = "→"
-                        cor_dy = "gray"
-
-                except:
-                    valor_dy_atual = 0
-                    variacao_dy = 0
-                    simbolo_dy = "?"
-                    cor_dy = "black"""
-
-                # Linha HTML da tabela
                 linhas_tabela += f"""
-<tr>
-<td style="border: 1px solid #ddd; padding: 8px;">{variavel}</td>
-<td style="border: 1px solid #ddd; padding: 8px;">{tipo_corr or "N/A"}</td>
-<td style="border: 1px solid #ddd; padding: 8px;">{corr:.2f}</td>
-<td style="border: 1px solid #ddd; padding: 8px;">{lag}</td>
-<td style="border: 1px solid #ddd; padding: 8px;">
-<span style="color:{cor_macro}; font-weight:500;">{simbolo_macro} {variacao_macro:+.2f}%</span>
-</td>
-</tr>
-"""
+            <tr>
+            <td style="border: 1px solid #ddd; padding: 8px;">{variavel}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">{tipo_corr or "N/A"}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">{corr:.2f}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">{lag}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">
+            <span style="color:{cor_macro}; font-weight:500;">{simbolo_macro} {variacao_macro:+.2f}%</span>
+            </td>
+            </tr>
+            """
 
+            # ⬇️ Agora só monta e exibe o HTML se houver dados
+            if linhas_tabela:
                 cards_html = f"""
-<table style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; margin-top: 10px;">
-<thead>
-<tr style="background-color: #f2f2f2;">
-<th style="border: 1px solid #ddd; padding: 8px;">Variável</th>
-<th style="border: 1px solid #ddd; padding: 8px;">Tipo de Correlação</th>
-<th style="border: 1px solid #ddd; padding: 8px;">Correlação</th>
-<th style="border: 1px solid #ddd; padding: 8px;">Lag (meses)</th>
-<th style="border: 1px solid #ddd; padding: 8px;">Variação Macro</th>
-</tr>
-</thead>
-<tbody>
-{linhas_tabela}
-</tbody>
-</table>
-"""
-
-            st.markdown(cards_html, unsafe_allow_html=True)
+                <table style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; margin-top: 10px;">
+                <thead>
+                <tr style="background-color: #f2f2f2;">
+                <th style="border: 1px solid #ddd; padding: 8px;">Variável</th>
+                <th style="border: 1px solid #ddd; padding: 8px;">Tipo de Correlação</th>
+                <th style="border: 1px solid #ddd; padding: 8px;">Correlação</th>
+                <th style="border: 1px solid #ddd; padding: 8px;">Lag (meses)</th>
+                <th style="border: 1px solid #ddd; padding: 8px;">Variação Macro</th>
+                </tr>
+                </thead>
+                <tbody>
+                {linhas_tabela}
+                </tbody>
+                </table>
+                """
+                st.markdown(cards_html, unsafe_allow_html=True)
+            else:
+                st.info("⚠️ Nenhuma correlação disponível para exibir para este fundo.")
 
 
         # Tese Quantitativa

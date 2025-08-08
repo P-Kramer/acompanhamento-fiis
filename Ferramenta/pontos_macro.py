@@ -127,11 +127,18 @@ def sintetizar_sinal_final(sinais):
     resultado = df_sinais.groupby("sinal")["peso"].sum().sort_values(ascending=False)
     return resultado.idxmax()
 
-# Importações externas
-from alfas import df_dy_diario
-from dados import df_merged
-from corr import resultados
-from dados import correlacoes_por_variavel
+import streamlit as st
+
+df_dy_diario = st.session_state.get("df_dy_diario")
+df_merged = st.session_state.get("df_merged")
+resultados = st.session_state.get("resultados")
+
+resultados = st.session_state.get("resultados")
+
+if resultados is None:
+    st.warning("⚠ A variável 'resultados' ainda não foi carregada.")
+    st.stop()
+
 
 # Pré-processamento do DY: diferenciar e manter coluna Data
 var_df_dy_diario = df_dy_diario.copy()
@@ -229,3 +236,4 @@ def analisar_variavel_macro(fundo, variavel, categoria, df_dy, df_macro, resulta
     correlacoes_por_variavel=correlacoes_por_variavel
 ))"""
 
+st.session_state["sinais_categoria"] = sinais_categoria

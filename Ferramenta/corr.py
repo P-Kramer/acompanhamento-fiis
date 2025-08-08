@@ -3,11 +3,10 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 
-from dados import df_merged
-from alfas import df_dy_mensal
-from dados import correlacoes_por_variavel
-
 estrategias_fiis_reorganizado = st.session_state.get("estrategias_fiis_reorganizado")
+df_merged = st.session_state.get("df_merged")
+df_dy_mensal = st.session_state.get("df_dy_mensal")
+correlacoes_por_variavel = st.session_state.get("correlacoes_por_variavel")
 
 def calcular_correlacoes(
     df_variaveis: pd.DataFrame,
@@ -113,13 +112,45 @@ def calcular_correlacoes(
     return resultados_por_categoria
 
 
-# Executar
-resultados = calcular_correlacoes(
-    df_variaveis=df_merged,
-    df_dy=df_dy_mensal,
-    estrategias_fiis_reorganizado=estrategias_fiis_reorganizado,
-    correlacoes_esperadas=correlacoes_por_variavel,janela_suavizacao = 6,
-    min_periodos = 3,
-    max_lag = 12,
-    limite_correlacao = 0.3
-)
+st.write("📊 DEBUG - df_merged:", type(df_merged), df_merged is None)
+st.write("📊 DEBUG - df_dy_mensal:", type(df_dy_mensal), df_dy_mensal is None)
+st.write("📊 DEBUG - estrategias_fiis_reorganizado:", type(estrategias_fiis_reorganizado), estrategias_fiis_reorganizado is None)
+st.write("📊 DEBUG - correlacoes_por_variavel:", type(correlacoes_por_variavel), correlacoes_por_variavel is None)
+
+
+import streamlit as st
+from corr import calcular_correlacoes
+
+correlacoes_por_variavel = st.session_state.get("correlacoes_por_variavel")
+df_merged = st.session_state.get("df_merged")
+df_dy_mensal = st.session_state.get("df_dy_mensal")
+
+def carregar_resultados():
+    st.markdown("🧠 **DEBUG - carregar_resultados() iniciada**")
+
+    # Recuperar do session_state
+    estrategias = st.session_state.get("estrategias_fiis_reorganizado")
+    st.write("🧪 DEBUG - df_merged:", type(df_merged))
+    st.write("🧪 DEBUG - df_dy_mensal:", type(df_dy_mensal))
+    st.write("🧪 DEBUG - correlacoes_por_variavel:", type(correlacoes_por_variavel))
+    st.write("🧪 DEBUG - estrategias:", type(estrategias))
+
+    # Verificação de pré-requisitos
+    if any(x is None for x in [df_merged, df_dy_mensal, correlacoes_por_variavel, estrategias]):
+        st.warning("⚠️ Variáveis necessárias para resultados ainda não estão disponíveis.")
+        return
+
+    # Cálculo principal
+    resultados = calcular_correlacoes(
+        df_variaveis=df_merged,
+        df_dy=df_dy_mensal,
+        estrategias_fiis_reorganizado=estrategias,
+        correlacoes_esperadas=correlacoes_por_variavel,
+        janela_suavizacao=6,
+        min_periodos=3,
+        max_lag=12,
+        limite_correlacao=0.3
+    )
+
+    st.session_state.resultados = resultados
+    st.success("✅ Resultados de correlação calculados com sucesso!")

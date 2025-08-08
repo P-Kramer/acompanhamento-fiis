@@ -94,6 +94,21 @@ def pagina_inicial():
 
             st.success("✅ Arquivo carregado e estratégias extraídas com sucesso!")
 
+            from alfas import calcular_alfas
+            from top_fundos import calcular_scores
+            from dados import carregar_variaveis_macro  # <- ajuste o nome do módulo
+            from corr import carregar_resultados
+
+            calcular_alfas()
+            df_merged, correlacoes = carregar_variaveis_macro(st.session_state.get("arquivo"))
+            if df_merged is None or correlacoes is None:
+                st.stop()
+
+            calcular_scores()
+            carregar_resultados()
+
+            st.write("Executou carregar_resultados")
+
             with st.expander("🔍 Visualizar Estratégias por Categoria", expanded=False):
                 for categoria, fundos in estrategias_fiis_reorganizado.items():
                     st.markdown(f"**{categoria}**: {', '.join(fundos)}")
